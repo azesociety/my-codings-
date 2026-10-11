@@ -22,7 +22,9 @@ public final class SpearQuickLungeModule {
         key = available(savedKey) ? savedKey : GLFW.GLFW_KEY_UNKNOWN;
         preferredSlot = savedSlot >= -1 && savedSlot < 9 ? savedSlot : -1;
         cancel();
-        status = key == GLFW.GLFW_KEY_UNKNOWN ? "Assign a quick-lunge key" : "Press " + keyLabel() + ": spear jab + return";
+        // Fabric client initializers run before GLFW initialization. Key labels use
+        // glfwGetKeyName internally, so resolve them only from the later GUI/input path.
+        status = key == GLFW.GLFW_KEY_UNKNOWN ? "Assign a quick-lunge key" : "Quick lunge ready: spear jab + return";
     }
     public static int key() { return key; }
     public static int mouseCode(int button) { return -100 - button; }

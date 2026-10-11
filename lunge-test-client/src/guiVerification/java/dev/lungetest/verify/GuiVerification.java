@@ -49,6 +49,7 @@ public final class GuiVerification implements ClientModInitializer {
     private boolean configRestored;
     private final boolean[][] hudRendered = new boolean[LungeTestClient.HudMode.values().length][LungeTestClient.HudCorner.values().length];
     @Override public void onInitializeClient() {
+        StartupBindVerification.verify();
         backupConfiguration();
         ClientLifecycleEvents.CLIENT_STOPPING.register(client -> restoreConfiguration());
         Runtime.getRuntime().addShutdownHook(new Thread(this::restoreConfiguration,

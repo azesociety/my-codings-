@@ -1,4 +1,9 @@
-# Azeium 2.4.0
+# Azeium 2.4.1
+
+Fixed in 2.4.1: restoring a saved spear shortcut no longer resolves its keyboard
+label before GLFW initializes. This fixes the reproduced "GLFW library is not
+initialized" launch failure with saved keyboard shortcuts. Existing settings
+and shortcuts are retained; no config reset is needed.
 
 New in 2.4.0: a full shared visual refresh with licensed Allura cursive brand and
 module headings, readable Open Sans controls, satin pastel gradients, rounded
@@ -92,7 +97,7 @@ Logs are capped at 12,000 entries per session. Start a new session when needed.
 
 ## Startup compatibility
 
-Azeium 2.4.0 includes MixinExtras **0.5.5** inside its JAR and requires that version
+Azeium 2.4.1 includes MixinExtras **0.5.5** inside its JAR and requires that version
 or newer. This resolves the reproduced `ArrayList cannot be cast to AnnotationNode`
 exception in `FactoryRedirectWrapperMixinTransformer` when MixinExtras 0.5.4
 processes the newer Redirect annotation arrays used with Sponge Mixin 0.17.4.
@@ -107,7 +112,7 @@ validation covers the reproduced library failure and an isolated Fabric client.
 
 Remove previous Spear Controls, Lunge Test Controls, Spear Test Lab, Spear Sprint
 and combined test JARs, including previous Azeium versions. Put
-`azeium-2.4.0-mc1.21.11.jar` in your Minecraft
+`azeium-2.4.1-mc1.21.11.jar` in your Minecraft
 instance's `mods` folder alongside Fabric API. This is a client mod, not a Paper
 plugin. EntityCulling is not included or required.
 
