@@ -63,6 +63,7 @@ public final class CombatAssistModule {
     }
     private enum Stage { READY, AXE_HIT, COMPLETE }
     private static final class State {
+        final Feature feature;
         Preferences prefs;
         boolean enabled, held, queued;
         ClientPacketListener connection;
@@ -72,7 +73,7 @@ public final class CombatAssistModule {
         long selectedAt, stageAt, queuedAt;
         LivingEntity comboTarget;
         String status = "Disabled";
-        State(Feature feature) { prefs = new Preferences(feature); }
+        State(Feature feature) { this.feature = feature; prefs = new Preferences(feature); }
     }
     private static final EnumMap<Feature, State> STATES = new EnumMap<>(Feature.class);
     private static long ticks;
@@ -274,7 +275,7 @@ public final class CombatAssistModule {
             return activation(feature) == Activation.AUTOMATIC ? "Fall and click: hit with your mace"
                     : "Hold " + activationKeyLabel(feature) + " and click while falling";
         String target = feature == Feature.MACE && maceAction() == MaceAction.SWAP_ONLY
-                ? "any entity" : "a hostile mob";
+                ? "any entity" : feature == Feature.STUNSLAM ? "a player or hostile mob" : "a hostile mob";
         return activation(feature) == Activation.AUTOMATIC ? "Hit " + target + " to start"
                 : "Hold " + activationKeyLabel(feature) + " and hit " + target;
     }
@@ -293,14 +294,14 @@ public final class CombatAssistModule {
     }
     private static void tickMace(Minecraft client, State state) {
         LivingEntity target = state.comboTarget;
-        if (!eligible(client.player, target)) {
-            cancel(client, state); state.status = "Target lost: hit a mob to restart"; return;
+        if (!eligible(client.player, target, state)) {
+            cancel(client, state); state.status = "Target lost: hit again to restart"; return;
         }
         if (ticks - state.stageAt > 100 + state.prefs.reactionTicks + state.prefs.actionIntervalTicks) {
-            cancel(client, state); state.status = "Follow-up timed out: hit a mob to restart"; return;
+            cancel(client, state); state.status = "Follow-up timed out: hit again to restart"; return;
         }
         if (!select(client, state, maceSlot(client.player))) { state.status = "Put a mace in your hotbar"; return; }
-        if (!inReach(client.player, target)) {
+        if (!inReach(client.player, target, state)) {
             state.status = "Waiting for target within sight and reach";
             return;
         }
@@ -316,21 +317,21 @@ public final class CombatAssistModule {
         LocalPlayer player = client.player;
         if (state.stage == Stage.COMPLETE) {
             releaseSlot(client, state);
-            state.status = "Combo finished: hit a mob to restart";
+            state.status = "Combo finished: hit again to restart";
             return;
         }
         if (ticks - state.stageAt > (state.stage == Stage.READY ? 100 + state.prefs.reactionTicks : 80)
                 + state.prefs.actionIntervalTicks) {
-            finish(client, state, "Combo timed out: hit a mob to restart");
+            finish(client, state, "Combo timed out: hit again to restart");
             return;
         }
         LivingEntity target = state.comboTarget == null ? findTarget(client, state) : state.comboTarget;
-        if (!eligible(player, target)) {
-            finish(client, state, "Target lost: hit a mob to restart");
+        if (!eligible(player, target, state)) {
+            finish(client, state, "Target lost: hit again to restart");
             return;
         }
         if (state.stage == Stage.READY) {
-            if (!inReach(player, target)) { state.status = "Move within axe reach"; return; }
+            if (!inReach(player, target, state)) { state.status = "Move within axe reach"; return; }
             if (!select(client, state, axeSlot(player))) { finish(client, state, "Axe missing: combo stopped"); return; }
             if (!charged(player, state)) { state.status = "Charging axe"; return; }
             if (attack(client, state, target)) {
@@ -386,12 +387,14 @@ public final class CombatAssistModule {
         }
         return -1;
     }
-    private static boolean eligible(LocalPlayer player, Entity target) {
-        return target instanceof LivingEntity living && target instanceof Enemy && !(target instanceof Player)
-                && target != player && living.isAlive() && !target.isRemoved() && !player.isAlliedTo(target);
+    private static boolean eligible(LocalPlayer player, Entity target, State state) {
+        boolean supported = target instanceof Enemy || state.feature == Feature.STUNSLAM
+                && target instanceof Player other && !other.isSpectator() && !other.isCreative();
+        return supported && target instanceof LivingEntity living && target != player
+                && living.isAlive() && !target.isRemoved() && !player.isAlliedTo(target);
     }
-    private static boolean inReach(LocalPlayer player, LivingEntity target) {
-        return eligible(player, target) && visibleInReach(player, target);
+    private static boolean inReach(LocalPlayer player, LivingEntity target, State state) {
+        return eligible(player, target, state) && visibleInReach(player, target);
     }
     private static boolean visibleInReach(LocalPlayer player, Entity target) {
         if (!player.isWithinAttackRange(target.getBoundingBox(), 0.0)
@@ -409,19 +412,19 @@ public final class CombatAssistModule {
         LocalPlayer player = client.player;
         if (state.prefs.targetMode == TargetMode.CROSSHAIR) {
             Entity target = client.hitResult instanceof EntityHitResult hit ? hit.getEntity() : client.crosshairPickEntity;
-            return eligible(player, target) && inReach(player, (LivingEntity) target) ? (LivingEntity) target : null;
+            return eligible(player, target, state) && inReach(player, (LivingEntity) target, state) ? (LivingEntity) target : null;
         }
         LivingEntity closest = null;
         double distance = Double.MAX_VALUE;
-        for (var entity : client.level.entitiesForRendering()) if (eligible(player, entity)) {
+        for (var entity : client.level.entitiesForRendering()) if (eligible(player, entity, state)) {
             var candidate = (LivingEntity) entity;
             double next = player.distanceToSqr(candidate);
-            if (next < distance && inReach(player, candidate)) { closest = candidate; distance = next; }
+            if (next < distance && inReach(player, candidate, state)) { closest = candidate; distance = next; }
         }
         return closest;
     }
     private static boolean attack(Minecraft client, State state, LivingEntity target) {
-        if (!charged(client.player, state) || !inReach(client.player, target)) {
+        if (!charged(client.player, state) || !inReach(client.player, target, state)) {
             state.status = "Waiting for charge, sight and reach";
             return false;
         }
@@ -558,7 +561,7 @@ public final class CombatAssistModule {
         return state.enabled && (state.prefs.activation == Activation.AUTOMATIC || state.held)
                 && client.player != null && client.level != null && client.gameMode != null
                 && client.getConnection() != null && client.player.isAlive() && ready(client, state)
-                && eligible(client.player, target) && inReach(client.player, (LivingEntity) target);
+                && eligible(client.player, target, state) && inReach(client.player, (LivingEntity) target, state);
     }
     private static void queue(Minecraft client, State state, LivingEntity target) {
         state.connection = client.getConnection();

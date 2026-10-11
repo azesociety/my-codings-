@@ -182,7 +182,7 @@ public final class ClientSettingsScreen extends AzeiumScreen {
             UiTypography.center(g, font, "Current theme: " + ThemeManager.theme().label, x + w / 2, top() + 176, ThemeManager.text());
         } else if (page == Page.TESTS && trial == Trial.STUN) {
             UiTypography.draw(g, font, "Automatic axe → mace", x, top() + 90, ThemeManager.text(), false);
-            UiTypography.draw(g, font, "Click a hostile mob to start.", x, top() + 114, ThemeManager.muted(), false);
+            UiTypography.draw(g, font, "Click a player or hostile mob to start.", x, top() + 114, ThemeManager.muted(), false);
             UiTypography.draw(g, font, "Keep both tools in your hotbar.", x, top() + 138, ThemeManager.muted(), false);
         } else if (page == Page.CLIENT) {
             UiTypography.draw(g, font, "Preferences save automatically.", x, top() + 160, ThemeManager.muted(), false);

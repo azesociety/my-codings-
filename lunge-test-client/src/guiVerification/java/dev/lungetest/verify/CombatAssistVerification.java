@@ -155,6 +155,7 @@ public final class CombatAssistVerification {
             setMaceAction(CombatAssistModule.MaceAction.FALLING_SMASH);
             verifyFallingSmash(client, player, level, zombie, connection);
             verifyAxeCombo(client, player, level, zombie, connection);
+            verifyPlayerCombo(client, player, level, connection, unsafe);
             LungeTestClient.LOG.info("COMBAT_ASSIST_VERIFIED: {} checks; same-click falling Smash, original-slot restoration, preference migration and fixed axe-to-mace combos, hold/release, session/focus guards and shared action budget; no network transport", checks);
         } catch (ReflectiveOperationException e) {
             throw new AssertionError("Could not prepare real vanilla combat-assist fixture", e);
@@ -971,6 +972,71 @@ public final class CombatAssistVerification {
         }
         require(attacks(connection) == 2,
                 "StunSlam priority prevents a third recursive Auto Mace follow-up when both modules are enabled");
+    }
+
+    private static void verifyPlayerCombo(Minecraft client, CombatPlayer player, CombatLevel level,
+            CapturedConnection connection, Unsafe unsafe) throws ReflectiveOperationException {
+        var target = (CombatPlayer) unsafe.allocateInstance(CombatPlayer.class);
+        target.fixtureLevel = level;
+        target.inventory = new Inventory(target, new EntityEquipment());
+        target.abilities = new Abilities();
+        target.cooldowns = new ItemCooldowns();
+        target.offhand = new ItemStack(Items.SHIELD);
+        target.velocity = Vec3.ZERO;
+        target.alive = true;
+        target.setId(903);
+        set(Entity.class, target, "eyeHeight", 1.62F);
+        locate(target, new Vec3(.5, 3, 2.5));
+        locate(player, new Vec3(.5, 3, .5));
+        player.grounded = true;
+        player.velocity = Vec3.ZERO;
+        player.fallDistance = 0;
+        client.hitResult = new EntityHitResult(target);
+        client.crosshairPickEntity = target;
+        restart(client, player, connection, SLAM);
+        client.gameMode.attack(player, target);
+        require(attacks(connection) == 0, "A deliberate player click queues Stun Slam before the original attack");
+        tick(client, player, 1);
+        recharge(player);
+        tick(client, player, 2);
+        require(attacks(connection) == 1 && player.lastAttackStack.is(Items.DIAMOND_AXE)
+                && player.lastPredictedTarget == target, "The axe stage attacks the clicked player");
+        require(hasSlotBeforeAttack(connection, 7, 1), "Player combo synchronizes the axe before its hit");
+        tick(client, player, 2);
+        recharge(player);
+        tick(client, player, 4);
+        require(attacks(connection) == 2 && player.lastAttackStack.is(Items.MACE)
+                && player.lastPredictedTarget == target, "The mace stage attacks that same player exactly once");
+        require(hasSlotBeforeAttack(connection, 3, 2) && player.inventory.getSelectedSlot() == 0,
+                "Player combo synchronizes the mace and restores the original slot");
+        recharge(player);
+        tick(client, player, 90);
+        require(attacks(connection) == 2, "Player Stun Slam never repeats without another manual click");
+        for (boolean spectator : new boolean[]{true, false}) {
+            restart(client, player, connection, SLAM);
+            target.spectator = spectator;
+            target.creative = !spectator;
+            require(!CombatAssistModule.beginManualAttack(client, target),
+                    "Stun Slam excludes " + (spectator ? "spectator" : "creative") + " players");
+            tick(client, player, 6);
+            require(attacks(connection) == 0, "Excluded players never receive a scheduled combo");
+        }
+        target.spectator = target.creative = false;
+        restart(client, player, connection, SLAM);
+        var team = new PlayerTeam(new Scoreboard(), "survival-allies");
+        player.team = target.team = team;
+        require(!CombatAssistModule.beginManualAttack(client, target), "Stun Slam preserves allied-player exclusion");
+        player.team = target.team = null;
+        client.gameMode.attack(player, target);
+        tick(client, player, 1);
+        recharge(player);
+        tick(client, player, 2);
+        require(attacks(connection) == 1, "Player cancellation fixture completes its axe stage");
+        target.alive = false;
+        recharge(player);
+        tick(client, player, 6);
+        require(attacks(connection) == 1 && player.inventory.getSelectedSlot() == 0,
+                "A player dying between stages cancels the mace hit and returns the original slot");
     }
 
     private static void hold(Minecraft client, CombatAssistModule.Feature feature, boolean pressed) {

@@ -227,7 +227,7 @@ public final class LungeTestScreen extends AzeiumScreen {
                     : swapOnly()
                     ? "Swap only keeps all attacks manual. This charge preference applies only if you choose Charged follow-up. Any entity hit can select your mace; your original hit still uses the item you held."
                     : "After your manual hit, switch to a hotbar mace. A hostile mob can receive one fully charged follow-up. Falling smash requires a real fall; Normal + smash also allows grounded hits. Your previous slot is restored afterward.";
-        return "Click a hostile mob to start the automatic axe-to-mace sequence.";
+        return "Click a player or hostile mob to start the automatic axe-to-mace sequence.";
     }
     private String combatKeyLabel() {
         return captureActivation == combatFeature() ? "Press a use key..."
@@ -545,7 +545,7 @@ public final class LungeTestScreen extends AzeiumScreen {
             }
             case AUTO_STUNSLAM -> {
                 text(g, CombatAssistModule.status(CombatAssistModule.Feature.STUNSLAM), x, settings + 3, ACCENT, contentWidth);
-                text(g, "Click a hostile mob. Axe, then mace.", x, settings + 24, TEXT, contentWidth);
+                text(g, "Click a player or hostile mob. Axe, then mace.", x, settings + 24, TEXT, contentWidth);
                 text(g, "Keep both tools in your hotbar.", x, settings + 45, MUTED, contentWidth);
                 if (!compact()) text(g, "Automatic timing. No extra use key.", x, settings + 75, MUTED, contentWidth);
             }
