@@ -1,0 +1,40 @@
+Azeium 2.3.0 — Minecraft Java 1.21.11
+
+INSTALL
+Use Java 21, Fabric Loader 0.19.3+ and Fabric API for Minecraft 1.21.11.
+Remove old Azeium/spear-control JARs, then put azeium-2.3.0-mc1.21.11.jar in this profile's mods folder.
+Press Right Shift (or your saved menu key).
+
+NEW CONTROLS
+Auto Mace always uses Smash. Enable it; during a valid falling entity attack,
+it selects your hotbar mace for that hit, then returns to the previous slot.
+Cancelled attacks return too. Grounded/rising/short falls keep their held item.
+Reach cycles Vanilla (default) and 3–6 blocks in half-block steps.
+This controls local eligibility for an already selected crosshair entity.
+It does not extend crosshair picking or server permissions; distant hits can
+be rejected by the server. No guarantee of bypassing anticheat is made.
+
+Spear's Quick-lunge key accepts keyboard keys and mouse buttons 1–8.
+Click that setting, then press the desired key or mouse button. Escape cancels;
+Delete clears. Preferences persist. One press swaps to a hotbar spear, performs
+one normal jab and returns to the original slot. Holding does not auto-repeat.
+The shortcut works with Spear OFF; vanilla cooldowns still apply in that case.
+The module's regular Keybind still toggles cooldown-removal controls separately.
+Menus, lost focus, death, disconnect and item use prevent gameplay shortcuts.
+Actual lunges require a Lunge enchanted spear and normal vanilla conditions.
+
+DOWNLOAD WEBSITE
+Extract the ready ZIP and open index.html in a browser. Its only visible control
+is Download. It works offline and saves a ZIP with the JAR, source ZIP and README.
+If a viewer displays HTML code, save it as an .html file and open it in a browser.
+
+SOURCE
+Extract azeium-2.3.0-source.zip. Build with Java 21: ./gradlew build (Windows: gradlew.bat build).
+First builds need Minecraft/Fabric dependencies. Read README.md for all modules.
+
+VALIDATION
+24 unit tests passed; transformed client runtime checks passed, including mouse
+capture, module-OFF spear action, same-click Smash, slot restoration, cancelled
+attacks, manual slot ownership and reach boundaries. 300 GUI ticks rendered.
+Production JAR startup is checked separately. No full Dawn modpack, authenticated
+world or live multiplayer anticheat compatibility is claimed.
