@@ -1,4 +1,6 @@
-# Azeium 2.4.2
+# Azeium 2.4.3
+
+Stun Slam now selects its axe before vanilla routes a spear click. It also takes priority over Auto Mace on valid combo clicks while falling. Cancelled clicks restore the original slot without queuing a combo.
 
 Stun Slam now supports manually clicked survival players, using the same charged axe-to-mace sequence and original-slot return as mob combat. Allied players remain excluded.
 
@@ -99,7 +101,7 @@ Logs are capped at 12,000 entries per session. Start a new session when needed.
 
 ## Startup compatibility
 
-Azeium 2.4.2 includes MixinExtras **0.5.5** inside its JAR and requires that version
+Azeium 2.4.3 includes MixinExtras **0.5.5** inside its JAR and requires that version
 or newer. This resolves the reproduced `ArrayList cannot be cast to AnnotationNode`
 exception in `FactoryRedirectWrapperMixinTransformer` when MixinExtras 0.5.4
 processes the newer Redirect annotation arrays used with Sponge Mixin 0.17.4.
@@ -114,7 +116,7 @@ validation covers the reproduced library failure and an isolated Fabric client.
 
 Remove previous Spear Controls, Lunge Test Controls, Spear Test Lab, Spear Sprint
 and combined test JARs, including previous Azeium versions. Put
-`azeium-2.4.2-mc1.21.11.jar` in your Minecraft
+`azeium-2.4.3-mc1.21.11.jar` in your Minecraft
 instance's `mods` folder alongside Fabric API. This is a client mod, not a Paper
 plugin. EntityCulling is not included or required.
 
@@ -287,7 +289,7 @@ flying, riding and swimming. Auto Clutch has priority when it needs to place a
 supply. Charged combos restore the original selected slot after completion or
 cancellation if the helper still controls that slot. Your own hotbar change cancels a queued combo without replacing your
 selection or switching the module OFF. Your next click can start a fresh combo.
-Stun Slam has priority outside a valid Falling smash click when both modules are enabled. Both start OFF on launch and turn OFF on death,
+Stun Slam has priority for valid axe-to-mace combo clicks when both modules are enabled, including while falling. Both start OFF on launch and turn OFF on death,
 disconnect or world replacement.
 
 The **Liquid Glass** menu uses rounded translucent panels, layered reflections,

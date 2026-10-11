@@ -439,8 +439,42 @@ public final class CombatAssistModule {
         } finally { dispatching = false; }
         return true;
     }
-    /** Selects a real hotbar mace before vanilla handles this same deliberate attack click. */
+    /** Prepare the axe before vanilla chooses its spear or ordinary attack path. */
+    private static boolean prepareStunSlamAttack(Minecraft client, Entity target) {
+        State state = STATES.get(Feature.STUNSLAM);
+        if (dispatching || SpearQuickLungeModule.dispatching() || !state.enabled
+                || client.player == null || !client.player.isAlive() || !ready(client, state)
+                || !eligible(client.player, target, state)) return false;
+        if (state.connection != null && (state.connection != client.getConnection() || state.level != client.level)) {
+            setEnabled(Feature.STUNSLAM, false);
+            return false;
+        }
+        if (state.ownedSlot >= 0 && client.player.getInventory().getSelectedSlot() != state.ownedSlot)
+            cancel(client, state);
+        if (state.queued) return inReach(client.player, (LivingEntity) target, state);
+        int axe = axeSlot(client.player);
+        if (axe < 0 || maceSlot(client.player) < 0) {
+            state.status = "Put an axe and mace in your hotbar";
+            return false;
+        }
+        // Range belongs to the axe we will use, not the previously held spear or item.
+        LocalPlayer player = client.player;
+        int previous = player.getInventory().getSelectedSlot();
+        boolean withinReach;
+        player.getInventory().setSelectedSlot(axe);
+        try { withinReach = inReach(player, (LivingEntity) target, state); }
+        finally { player.getInventory().setSelectedSlot(previous); }
+        if (!withinReach) { state.status = "Move within axe reach and sight"; return false; }
+        state.connection = client.getConnection();
+        state.level = client.level;
+        select(client, state, axe);
+        state.status = "Axe ready for your click";
+        return true;
+    }
+
+    /** Prepares Stun Slam first, otherwise selects the mace for a falling click. */
     public static boolean prepareManualAttack(Minecraft client, Entity target) {
+        if (prepareStunSlamAttack(client, target)) return false;
         State state = STATES.get(Feature.MACE);
         if (dispatching || state.prefs.maceAction != MaceAction.FALLING_SMASH
                 || !canSwap(client, state, target) || !ready(client, state) || !falling(client.player)) return false;
@@ -473,14 +507,14 @@ public final class CombatAssistModule {
     }
     /** Routes a real player click to an axe/mace combo before vanilla sends the initial attack. */
     public static boolean beginManualAttack(Minecraft client, Entity target) {
-        if (prepareManualAttack(client, target)) return false;
-        if (dispatching || !canStart(client, Feature.STUNSLAM, target)) return false;
-        State state = STATES.get(Feature.STUNSLAM);
-        if (state.queued) return true;
-        if (maceSlot(client.player) < 0 || axeSlot(client.player) < 0)
-            return false;
-        queue(client, state, (LivingEntity) target);
-        return true;
+        if (dispatching) return false;
+        if (prepareStunSlamAttack(client, target)) {
+            State state = STATES.get(Feature.STUNSLAM);
+            if (!state.queued) queue(client, state, (LivingEntity) target);
+            return true;
+        }
+        prepareManualAttack(client, target);
+        return false;
     }
     /** Selects the mace after the real attack dispatch, preserving the player's original hit. */
     public static void onManualAttack(Minecraft client, Entity target) {
@@ -517,6 +551,9 @@ public final class CombatAssistModule {
     }
     /** Restore only our temporary selection; never overwrite a user's subsequent scroll. */
     public static void finishManualAttack(Minecraft client) {
+        State slam = STATES.get(Feature.STUNSLAM);
+        // A blocked vanilla click never reaches the game-mode hook that queues the combo.
+        if (!slam.queued) releaseSlot(client, slam);
         State state = STATES.get(Feature.MACE);
         boolean owned = state.ownedSlot >= 0 && client.player != null
                 && state.connection == client.getConnection() && state.level == client.level

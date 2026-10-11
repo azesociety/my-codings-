@@ -268,9 +268,17 @@ public final class CombatAssistVerification {
             restart(client, player, connection, MACE);
             CombatAssistModule.setEnabled(SLAM, true);
             client.gameMode.attack(player, zombie);
-            tick(client, player, 8);
-            require(attacks(connection) == 1 && player.lastAttackStack.is(Items.MACE),
-                    "Both enabled modules give a valid falling smash this click without queuing an axe behind it");
+            tick(client, player, 1);
+            recharge(player);
+            tick(client, player, 2);
+            require(attacks(connection) == 1 && player.lastAttackStack.is(Items.DIAMOND_AXE),
+                    "Stun Slam keeps its axe-first priority over Auto Mace during a falling click");
+            tick(client, player, 2);
+            recharge(player);
+            tick(client, player, 4);
+            require(attacks(connection) == 2 && player.lastAttackStack.is(Items.MACE)
+                            && player.inventory.getSelectedSlot() == 0,
+                    "The falling Stun Slam finishes with the mace and restores the original slot");
             for (String guard : List.of("range", "wall", "cooldown", "missing mace", "menu", "focus")) {
                 restart(client, player, connection, MACE);
                 if (guard.equals("range")) locate(zombie, new Vec3(.5, 3, 8));
@@ -1012,6 +1020,53 @@ public final class CombatAssistVerification {
         recharge(player);
         tick(client, player, 90);
         require(attacks(connection) == 2, "Player Stun Slam never repeats without another manual click");
+        var startAttack = Minecraft.class.getDeclaredMethod("startAttack");
+        startAttack.setAccessible(true);
+        var missTime = Minecraft.class.getDeclaredField("missTime");
+        missTime.setAccessible(true);
+        int previousMissTime = missTime.getInt(client);
+        ItemStack previousHeld = player.inventory.getItem(0).copy();
+        try {
+            for (var held : List.of(Items.DIAMOND_SWORD, Items.DIAMOND_SPEAR, Items.WIND_CHARGE)) {
+                for (boolean falling : new boolean[]{false, true}) {
+                    restart(client, player, connection, SLAM);
+                    CombatAssistModule.setEnabled(MACE, true);
+                    player.inventory.setItem(0, new ItemStack(held));
+                    player.grounded = !falling;
+                    player.velocity = falling ? new Vec3(0, -.5, 0) : Vec3.ZERO;
+                    player.fallDistance = falling ? 2.5 : 0;
+                    client.hitResult = new EntityHitResult(target);
+                    missTime.setInt(client, 0);
+                    startAttack.invoke(client);
+                    require(attacks(connection) == 0, "Actual player click queues Stun Slam with " + held
+                            + ", falling=" + falling + ", status=" + CombatAssistModule.status(SLAM));
+                    tick(client, player, 1);
+                    recharge(player);
+                    tick(client, player, 2);
+                    require(attacks(connection) == 1 && player.lastAttackStack.is(Items.DIAMOND_AXE),
+                            "Actual clicked-player combo starts with axe, including falling AutoMace conflicts");
+                    tick(client, player, 2);
+                    recharge(player);
+                    tick(client, player, 4);
+                    require(attacks(connection) == 2 && player.lastAttackStack.is(Items.MACE)
+                            && player.inventory.getSelectedSlot() == 0,
+                            "Actual clicked-player combo completes mace and returns the original slot");
+                }
+            }
+            restart(client, player, connection, SLAM);
+            missTime.setInt(client, 5);
+            startAttack.invoke(client);
+            for (int i = 0; i < 8; i++) { recharge(player); tick(client, player, 1); }
+            require(attacks(connection) == 0 && player.inventory.getSelectedSlot() == 0,
+                    "A vanilla-blocked player click neither queues Stun Slam nor leaves the axe selected");
+        } finally {
+            missTime.setInt(client, previousMissTime);
+            player.inventory.setItem(0, previousHeld);
+            player.grounded = true;
+            player.velocity = Vec3.ZERO;
+            player.fallDistance = 0;
+        }
+
         for (boolean spectator : new boolean[]{true, false}) {
             restart(client, player, connection, SLAM);
             target.spectator = spectator;
