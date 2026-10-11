@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "id": "lunge_test_client",
-  "version": "2.4.4",
+  "version": "2.5.0",
   "name": "Azeium",
-  "description": "Smooth movable gradient menus, manual spear controls, travel meter, player outlines, tracers, Auto Telly, clutch assistance, same-click falling Auto Mace, automatic axe-to-mace Stun Slam, combat test logs, Auto Rejoin, a saved spear quick-lunge action key, Armor Alerts, Fullbright and Session HUD with a paged module browser.",
+  "description": "Smooth movable gradient menus, manual spear controls, travel meter, player outlines, tracers, Auto Telly, clutch assistance, same-click falling Auto Mace, automatic axe-to-mace Stun Slam, toggle/hold left/right Autoclicker, combat test logs, Auto Rejoin, a saved spear quick-lunge action key, Armor Alerts, Fullbright and Session HUD with a paged module browser.",
   "environment": "client",
   "entrypoints": {
     "client": [

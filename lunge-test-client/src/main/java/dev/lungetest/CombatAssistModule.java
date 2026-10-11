@@ -64,6 +64,7 @@ public final class CombatAssistModule {
     private enum Stage { READY, AXE_HIT, COMPLETE }
     private static final class State {
         final Feature feature;
+        final InventoryHotbarLease inventory = new InventoryHotbarLease();
         Preferences prefs;
         boolean enabled, held, queued;
         ClientPacketListener connection;
@@ -119,6 +120,10 @@ public final class CombatAssistModule {
         state.prefs.reactionTicks = Math.clamp(reactionTicks, 0, 200);
         state.prefs.actionIntervalTicks = Math.clamp(actionIntervalTicks, 2, 200);
         save();
+    }
+    public static boolean busy() {
+        for (State state : STATES.values()) if (state.queued || state.ownedSlot >= 0) return true;
+        return false;
     }
     public static boolean enabled(Feature feature) { return STATES.get(feature).enabled; }
     public static String status(Feature feature) { return STATES.get(feature).status; }
@@ -221,7 +226,7 @@ public final class CombatAssistModule {
     /** End-of-tick execution sees manual attacks and the player's real equipment update first. */
     public static void tick(Minecraft client) {
         ticks++;
-        for (Feature feature : Feature.values()) maintain(client, feature);
+        for (Feature feature : Feature.values()) { STATES.get(feature).inventory.tick(client); maintain(client, feature); }
         Feature requested = requested(Feature.STUNSLAM) ? Feature.STUNSLAM
                 : requested(Feature.MACE) ? Feature.MACE : null;
         if (controller != requested) {
@@ -363,6 +368,7 @@ public final class CombatAssistModule {
             player.getInventory().setSelectedSlot(slot);
             state.ownedSlot = slot;
             state.selectedAt = ticks;
+            if (client.gameMode != null) ((HotbarSyncAccess) client.gameMode).azeium$syncCarriedItem();
             CombatTestLog.event("CombatAssist", "hotbar_selected", "slot=" + slot);
         }
         return true;
@@ -460,6 +466,11 @@ public final class CombatAssistModule {
             state.status = "Click a raised shield to start";
             return false;
         }
+        if (!state.inventory.ensure(client, stack -> stack.getItem() instanceof AxeItem || stack.is(ItemTags.AXES),
+                stack -> stack.is(Items.MACE))) {
+            state.status = "Need axe + mace in inventory; close other containers";
+            return false;
+        }
         int axe = axeSlot(client.player);
         if (axe < 0 || maceSlot(client.player) < 0) {
             state.status = "Put an axe and mace in your hotbar";
@@ -472,7 +483,7 @@ public final class CombatAssistModule {
         player.getInventory().setSelectedSlot(axe);
         try { withinReach = inReach(player, (LivingEntity) target, state); }
         finally { player.getInventory().setSelectedSlot(previous); }
-        if (!withinReach) { state.status = "Move within axe reach and sight"; return false; }
+        if (!withinReach) { state.inventory.release(client); state.status = "Move within axe reach and sight"; return false; }
         state.connection = client.getConnection();
         state.level = client.level;
         select(client, state, axe);
@@ -482,12 +493,16 @@ public final class CombatAssistModule {
 
     /** Prepares Stun Slam first, otherwise selects the mace for a falling click. */
     public static boolean prepareManualAttack(Minecraft client, Entity target) {
+        if (AutoStunSlamModule.busy() || AutoStunSlamModule.dispatching()) return false;
         if (prepareStunSlamAttack(client, target)) return false;
         State state = STATES.get(Feature.MACE);
         if (dispatching || state.prefs.maceAction != MaceAction.FALLING_SMASH
                 || !canSwap(client, state, target) || !ready(client, state) || !falling(client.player)) return false;
+        if (!state.inventory.ensure(client, stack -> stack.is(Items.MACE))) {
+            state.status = "Need a mace in inventory; close other containers"; return false;
+        }
         int slot = maceSlot(client.player);
-        if (slot < 0) { state.status = "Put a mace in your hotbar"; return false; }
+        if (slot < 0) { state.status = "Need a mace in inventory"; return false; }
         LocalPlayer player = client.player;
         int previous = player.getInventory().getSelectedSlot();
         // Test vanilla reach with the actual mace rather than the spear's minimum range.
@@ -495,6 +510,7 @@ public final class CombatAssistModule {
         if (!smashInReach(player, target) || player.getCooldowns().isOnCooldown(player.getMainHandItem())
                 || player.cannotAttackWithItem(player.getMainHandItem(), 0)) {
             player.getInventory().setSelectedSlot(previous);
+            state.inventory.release(client);
             state.status = "Waiting for mace reach and item cooldown";
             return false;
         }
@@ -515,7 +531,7 @@ public final class CombatAssistModule {
     }
     /** Routes a real player click to an axe/mace combo before vanilla sends the initial attack. */
     public static boolean beginManualAttack(Minecraft client, Entity target) {
-        if (dispatching) return false;
+        if (dispatching || AutoStunSlamModule.dispatching()) return false;
         if (prepareStunSlamAttack(client, target)) {
             State state = STATES.get(Feature.STUNSLAM);
             if (!state.queued) queue(client, state, (LivingEntity) target);
@@ -526,7 +542,7 @@ public final class CombatAssistModule {
     }
     /** Selects the mace after the real attack dispatch, preserving the player's original hit. */
     public static void onManualAttack(Minecraft client, Entity target) {
-        if (dispatching) return;
+        if (dispatching || AutoStunSlamModule.dispatching()) return;
         State state = STATES.get(Feature.MACE);
         if (state.prefs.maceAction == MaceAction.FALLING_SMASH) {
             if (canSwap(client, state, target) && client.player.getMainHandItem().is(Items.MACE)) {
@@ -623,9 +639,12 @@ public final class CombatAssistModule {
     }
     private static void releaseSlot(Minecraft client, State state) {
         if (state.ownedSlot >= 0 && client.player != null && state.connection == client.getConnection()
-                && state.level == client.level && client.player.getInventory().getSelectedSlot() == state.ownedSlot)
+                && state.level == client.level && client.player.getInventory().getSelectedSlot() == state.ownedSlot) {
             client.player.getInventory().setSelectedSlot(state.originalSlot);
+            if (client.gameMode != null) ((HotbarSyncAccess) client.gameMode).azeium$syncCarriedItem();
+        }
         state.originalSlot = state.ownedSlot = -1;
+        state.inventory.release(client);
     }
     private static void resetCombo(State state) {
         state.stage = Stage.READY;

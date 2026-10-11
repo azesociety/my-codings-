@@ -122,7 +122,7 @@ public final class TellyPilotModule {
                 // A real landing is required before issuing another jump. No airborne jump spam.
                 rotate(player, heading, forwardPitch());
                 status = "Auto Telly: face forward and prepare the next jump";
-                if (groundedTicks >= 2 && aimed(player, heading, forwardPitch(), 1.5F)) {
+                if (groundedTicks >= 1 && aimed(player, heading, forwardPitch(), 1.5F)) {
                     beginJump();
                 }
             } else {
@@ -138,6 +138,14 @@ public final class TellyPilotModule {
             airborneTicks++;
             if (airborneTicks > 32) {
                 stop(client, "landing not confirmed; toggle to restart");
+                return;
+            }
+            // Recover the forward view while descending over confirmed support. If the
+            // next footstep needs another block, canPlace takes priority and lines up that face.
+            if (placedThisJump && player.getDeltaMovement().y < 0 && supportedLanding(client, player)) {
+                phase = Phase.TURN_FORWARD;
+                rotate(player, heading, forwardPitch());
+                status = "Auto Telly: turn forward for landing";
                 return;
             }
             phase = Phase.TURN_BACK;
@@ -297,6 +305,13 @@ public final class TellyPilotModule {
                 return pos.immutable();
         }
         return null;
+    }
+
+    private static boolean supportedLanding(Minecraft client, LocalPlayer player) {
+        Vec3 landing = player.position().add(player.getDeltaMovement().multiply(2, 0, 2));
+        BlockPos floor = BlockPos.containing(landing.x, bridgeTop - 0.05, landing.z);
+        return client.level.isLoaded(floor) && client.level.getWorldBorder().isWithinBounds(floor)
+                && client.level.getBlockState(floor).isCollisionShapeFullBlock(client.level, floor);
     }
 
     private static boolean clearForward(Minecraft client, LocalPlayer player) {

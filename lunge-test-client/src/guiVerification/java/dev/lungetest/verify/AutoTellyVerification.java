@@ -92,6 +92,7 @@ public final class AutoTellyVerification {
             set(LocalPlayer.class, player, "connection", connection);
             player.inventory = new Inventory(player, new EntityEquipment());
             player.abilities = new Abilities();
+            set(Player.class, player, "abilities", player.abilities);
             player.cooldowns = new ItemCooldowns();
             player.offhand = ItemStack.EMPTY;
             player.velocity = Vec3.ZERO;
@@ -120,7 +121,7 @@ public final class AutoTellyVerification {
             // local collision integration and vanilla block use rather than setting pilot phases.
             anchor(client, player, level, connection, AutoClutchModule.TellySpeed.FAST);
             int jumps = 0, landings = 0, backwardTicks = 0, forwardTicks = 0;
-            int uses = 0;
+            int uses = 0, airborneForwardTurns = 0;
             double startX = player.getX();
             boolean previousJump = false;
             boolean previousGrounded = player.grounded;
@@ -135,9 +136,11 @@ public final class AutoTellyVerification {
                         "Automatic input/camera planning leaves velocity and physical fall distance untouched");
                 require(Math.abs(Mth.wrapDegrees(player.getYRot() - yawBefore)) <= 48.001F
                                 && Math.abs(player.getXRot() - pitchBefore) <= 25.001F,
-                        "Pilot START tick turns the actual camera within its yaw/pitch limits");
+                        "Pilot START tick turns the actual camera within its yaw/pitch limits: tick=" + tick + ", position=" + player.position() + ", velocity=" + player.velocity + ", oldYaw=" + yawBefore + ", yaw=" + player.getYRot() + ", status=" + TellyPilotModule.status());
+                if (!player.grounded && TellyPilotModule.phase() == TellyPilotModule.Phase.TURN_FORWARD) airborneForwardTurns++;
                 player.input.tick();
                 var input = player.input.keyPresses;
+                player.sprinting = input.sprint();
                 if (input.jump()) {
                     require(player.grounded && !previousJump,
                             "Each automatic jump is a single grounded ordinary keyboard pulse");
@@ -171,6 +174,7 @@ public final class AutoTellyVerification {
             require(jumps >= 3 && landings >= 3, "Automatic Telly completes three jump/backward-place/landing cycles: jumps=" + jumps + ", landings=" + landings + ", uses=" + uses + ", position=" + player.position() + ", status=" + TellyPilotModule.status());
             require(player.getX() > startX + 3 && backwardTicks > 0 && forwardTicks > 0,
                     "Telly moves along the bridge using forward travel and backward travel while looking back");
+            require(airborneForwardTurns > 0, "Telly visibly recovers the forward view before landing after confirming bridge support");
             require(uses >= 3 && player.inventory.getItem(6).getCount() == 64 - uses,
                     "Continuous automatic cycles send ordinary placement packets and consume actual survival blocks");
             require(level.states.keySet().stream().allMatch(pos -> pos.getY() == 2),
@@ -306,12 +310,12 @@ public final class AutoTellyVerification {
 
     private static void integrate(Minecraft client, PilotPlayer player) throws ReflectiveOperationException {
         var input = player.input.getMoveVector();
-        double yaw = Math.toRadians(player.getYRot());
-        // Movement speed is locally controlled; the exact vanilla keyboard vector, camera yaw,
-        // jump impulse and block collision are real. This deliberately is not full aiStep.
-        double speed = 0.16;
-        Vec3 desired = new Vec3((input.x * Math.cos(yaw) - input.y * Math.sin(yaw)) * speed,
-                player.grounded ? -0.08 : player.velocity.y, (input.y * Math.cos(yaw) + input.x * Math.sin(yaw)) * speed);
+        // Use vanilla relative acceleration and preserve momentum, including the real
+        // sprint-jump impulse. This collision fixture still does not execute full aiStep.
+        boolean wasGrounded = player.grounded;
+        player.moveRelative(wasGrounded ? 0.1F : 0.02F, new Vec3(input.x, 0, input.y));
+        Vec3 desired = new Vec3(player.velocity.x, player.grounded ? -0.08 : player.velocity.y, player.velocity.z);
+        desired = player.backOff(desired);
         Vec3 physicalBefore = player.velocity;
         double fallBefore = player.fallDistance;
         for (int callback = 0; callback < 8; callback++) AutoClutchModule.beforeMove(client, desired);
@@ -321,11 +325,11 @@ public final class AutoTellyVerification {
         locate(player, player.position().add(movement));
         player.grounded = desired.y < 0 && Math.abs(desired.y - movement.y) > 1.0e-6;
         if (player.grounded) {
-            player.velocity = new Vec3(desired.x, 0, desired.z);
+            player.velocity = new Vec3(desired.x * 0.546, 0, desired.z * 0.546);
             player.fallDistance = 0;
         } else {
             if (movement.y < 0) player.fallDistance += (float) -movement.y;
-            player.velocity = new Vec3(desired.x, (desired.y - 0.08) * 0.98, desired.z);
+            player.velocity = new Vec3(desired.x * 0.91, (desired.y - 0.08) * 0.98, desired.z * 0.91);
         }
     }
 
@@ -362,7 +366,7 @@ public final class AutoTellyVerification {
         ItemStack offhand;
         Vec3 velocity;
         ClientLevel fixtureLevel;
-        boolean alive, grounded;
+        boolean alive, grounded, sprinting;
         private PilotPlayer() { super(null, null, null, null, null, null, false); }
         @Override public Inventory getInventory() { return inventory; }
         @Override public Abilities getAbilities() { return abilities; }
@@ -376,7 +380,7 @@ public final class AutoTellyVerification {
         }
         @Override public Vec3 getDeltaMovement() { return velocity; }
         @Override public void setDeltaMovement(Vec3 value) { velocity = value; }
-        @Override public boolean isSprinting() { return false; }
+        @Override public boolean isSprinting() { return sprinting; }
         @Override public boolean isAlive() { return alive; }
         @Override public boolean onGround() { return grounded; }
         @Override public boolean isInWater() { return false; }
@@ -384,7 +388,9 @@ public final class AutoTellyVerification {
         @Override public boolean onClimbable() { return false; }
         @Override public boolean isFallFlying() { return false; }
         @Override public boolean isPassenger() { return false; }
-        @Override public boolean isShiftKeyDown() { return false; }
+        @Override public boolean isShiftKeyDown() { return input != null && input.keyPresses.shift(); }
+        @Override protected boolean isStayingOnGroundSurface() { return isShiftKeyDown(); }
+        Vec3 backOff(Vec3 value) { return super.maybeBackOffFromEdge(value, net.minecraft.world.entity.MoverType.SELF); }
         @Override public boolean isSecondaryUseActive() { return false; }
         @Override public boolean isUsingItem() { return false; }
         @Override public boolean isSpectator() { return false; }

@@ -101,6 +101,8 @@ public final class CombatAssistVerification {
             connectionField.setAccessible(true);
             connectionField.set(player, connection);
             player.inventory = new Inventory(player, new EntityEquipment());
+            set(net.minecraft.world.entity.player.Player.class, player, "inventoryMenu", new net.minecraft.world.inventory.InventoryMenu(player.inventory, true, player));
+            player.containerMenu = player.inventoryMenu;
             player.abilities = new Abilities();
             player.cooldowns = new ItemCooldowns();
             player.alive = true;
@@ -158,7 +160,8 @@ public final class CombatAssistVerification {
             verifyAxeCombo(client, player, level, zombie, connection);
             zombie.blocking = false;
             verifyPlayerCombo(client, player, level, connection, unsafe);
-            LungeTestClient.LOG.info("COMBAT_ASSIST_VERIFIED: {} checks; same-click falling Smash, original-slot restoration, preference migration and fixed axe-to-mace combos, hold/release, session/focus guards and shared action budget; no network transport", checks);
+            verifyAutoClicker(client, player, zombie, connection);
+            LungeTestClient.LOG.info("COMBAT_ASSIST_VERIFIED: {} checks; same-click falling Smash, original-slot restoration, preference migration and inventory SWAP/return, uploaded automatic crosshair Stun Slam and tick-paced toggle/hold autoclicker, fixed axe-to-mace combos, hold/release, session/focus guards and shared action budget; no network transport", checks);
         } catch (ReflectiveOperationException e) {
             throw new AssertionError("Could not prepare real vanilla combat-assist fixture", e);
         } finally {
@@ -1119,6 +1122,168 @@ public final class CombatAssistVerification {
         tick(client, player, 6);
         require(attacks(connection) == 1 && player.inventory.getSelectedSlot() == 0,
                 "A player dying between stages cancels the mace hit and returns the original slot");
+        target.alive = true;
+        target.blocking = true;
+        verifyInventoryCombo(client, player, target, connection);
+    }
+
+    private static void verifyInventoryCombo(Minecraft client, CombatPlayer player, CombatPlayer target,
+            CapturedConnection connection) throws ReflectiveOperationException {
+        var saved = new ArrayList<ItemStack>();
+        for (int i = 0; i < 36; i++) saved.add(player.inventory.getItem(i).copy());
+        try {
+            CombatAssistModule.setEnabled(MACE, false);
+            CombatAssistModule.setEnabled(SLAM, false);
+            for (int i = 0; i < 36; i++) player.inventory.setItem(i, ItemStack.EMPTY);
+            for (int i = 1; i < 9; i++) player.inventory.setItem(i, new ItemStack(Items.COBBLESTONE, 64));
+            player.inventory.setItem(0, new ItemStack(Items.DIAMOND_SWORD));
+            player.inventory.setItem(12, new ItemStack(Items.DIAMOND_AXE));
+            player.inventory.setItem(31, new ItemStack(Items.MACE));
+            player.inventory.setSelectedSlot(0);
+            player.grounded = true;
+            player.velocity = Vec3.ZERO;
+            player.fallDistance = 0;
+            connection.packets.clear();
+            CombatAssistModule.setEnabled(SLAM, true);
+            client.hitResult = new EntityHitResult(target);
+            set(Minecraft.class, client, "missTime", 0);
+            ((dev.lungetest.SpearAttackAccess) client).azeium$startAttack();
+            require(connection.packets.stream().filter(net.minecraft.network.protocol.game.ServerboundContainerClickPacket.class::isInstance).count() == 2,
+                    "Inventory-only axe and mace enter a full hotbar through two actual vanilla SWAP packets: status=" + CombatAssistModule.status(SLAM) + ", packets=" + connection.packets + ", axe=" + player.inventory.getItem(12) + ", mace=" + player.inventory.getItem(31));
+            tick(client, player, 1); recharge(player); tick(client, player, 2);
+            require(attacks(connection) == 1 && player.lastAttackStack.is(Items.DIAMOND_AXE)
+                            && player.lastDisableSeconds > 0,
+                    "Inventory axe attacks with the actual vanilla shield-disabling weapon component");
+            target.blocking = false;
+            tick(client, player, 2); recharge(player); tick(client, player, 4);
+            require(attacks(connection) == 2 && player.lastAttackStack.is(Items.MACE)
+                            && player.inventory.getSelectedSlot() == 0,
+                    "Inventory mace follows the axe and returns the original selected slot");
+            require(player.inventory.getItem(12).is(Items.DIAMOND_AXE) && player.inventory.getItem(31).is(Items.MACE),
+                    "Both borrowed tools return to their original inventory cells");
+            for (int i = 1; i < 9; i++) require(player.inventory.getItem(i).is(Items.COBBLESTONE)
+                            && player.inventory.getItem(i).getCount() == 64,
+                    "Inventory borrowing preserves every displaced hotbar stack");
+            require(connection.packets.stream().filter(net.minecraft.network.protocol.game.ServerboundContainerClickPacket.class::isInstance).count() == 4,
+                    "Returning borrowed tools uses two additional ordinary SWAP packets");
+            target.blocking = true;
+            CombatAssistModule.setEnabled(SLAM, true);
+            connection.packets.clear();
+            ((dev.lungetest.SpearAttackAccess) client).azeium$startAttack();
+            CombatAssistModule.setEnabled(SLAM, false);
+            require(attacks(connection) == 0 && player.inventory.getItem(12).is(Items.DIAMOND_AXE)
+                            && player.inventory.getItem(31).is(Items.MACE) && player.inventory.getSelectedSlot() == 0,
+                    "Disabling before the axe hit returns inventory tools without sending an attack");
+            // The supplied add-on replaces the UI module with an automatic crosshair trigger.
+            connection.packets.clear(); target.blocking = false;
+            dev.lungetest.AutoStunSlamModule.setEnabled(true);
+            dev.lungetest.AutoStunSlamModule.tick(client);
+            require(attacks(connection) == 0, "Uploaded Stun Slam stays idle on a shield that is not raised");
+            target.blocking = true;
+            dev.lungetest.AutoStunSlamModule.tick(client);
+            require(attacks(connection) == 1 && player.lastAttackStack.is(Items.DIAMOND_AXE)
+                            && player.lastDisableSeconds > 0 && dev.lungetest.AutoStunSlamModule.busy(),
+                    "Uploaded Stun Slam automatically borrows the inventory axe and hits the raised shield without a click");
+            int borrowedAxe = player.inventory.getSelectedSlot();
+            require(hasSlotBeforeAttack(connection, borrowedAxe, 1), "Uploaded axe is synchronized before its ordinary attack packet");
+            target.blocking = false;
+            dev.lungetest.AutoStunSlamModule.tick(client);
+            require(attacks(connection) == 2 && player.lastAttackStack.is(Items.MACE) && player.inventory.getSelectedSlot() == 0,
+                    "Uploaded mace follow-up occurs on the next client tick even after the shield lowers, then returns the original slot");
+            require(player.inventory.getItem(12).is(Items.DIAMOND_AXE) && player.inventory.getItem(31).is(Items.MACE),
+                    "Uploaded sequence returns both inventory weapons after its follow-up");
+            target.blocking = true;
+            for (int i = 0; i < 12; i++) dev.lungetest.AutoStunSlamModule.tick(client);
+            require(attacks(connection) == 2, "Uploaded sequence respects its twelve-tick retrigger delay");
+            dev.lungetest.AutoStunSlamModule.tick(client);
+            require(attacks(connection) == 3, "Uploaded sequence can retrigger only after the delay while still aimed at a raised shield");
+            player.inventory.setSelectedSlot(6);
+            dev.lungetest.AutoStunSlamModule.tick(client);
+            require(attacks(connection) == 3 && player.inventory.getSelectedSlot() == 6,
+                    "Manual slot changes cancel the uploaded follow-up and preserve the player's choice");
+            dev.lungetest.AutoStunSlamModule.setEnabled(false); player.inventory.setSelectedSlot(0);
+            var team = new PlayerTeam(new Scoreboard(), "uploaded-allies"); team.setAllowFriendlyFire(false);
+            player.team = target.team = team; connection.packets.clear();
+            dev.lungetest.AutoStunSlamModule.setEnabled(true); dev.lungetest.AutoStunSlamModule.tick(client);
+            require(attacks(connection) == 0, "Uploaded sequence respects a team's disabled friendly fire");
+            player.team = target.team = null;
+            dev.lungetest.AutoStunSlamModule.tick(client);
+            client.screen = new net.minecraft.client.gui.screens.TitleScreen();
+            dev.lungetest.AutoStunSlamModule.tick(client); client.screen = null;
+            require(attacks(connection) == 1 && !dev.lungetest.AutoStunSlamModule.busy()
+                            && player.inventory.getSelectedSlot() == 0 && player.inventory.getItem(12).is(Items.DIAMOND_AXE),
+                    "Opening a screen cancels the uploaded sequence and returns borrowed items without a mace attack");
+            dev.lungetest.AutoStunSlamModule.setEnabled(false);
+        } finally {
+            dev.lungetest.AutoStunSlamModule.setEnabled(false);
+            CombatAssistModule.setEnabled(SLAM, false);
+            for (int i = 0; i < 36; i++) player.inventory.setItem(i, saved.get(i));
+        }
+    }
+
+    private static void verifyAutoClicker(Minecraft client, CombatPlayer player, CombatZombie target,
+            CapturedConnection connection) throws ReflectiveOperationException {
+        var previous = new Gson().fromJson(new Gson().toJson(dev.lungetest.AutoClickerModule.preferences()), dev.lungetest.AutoClickerModule.Preferences.class);
+        try {
+            CombatAssistModule.setEnabled(MACE, false);
+            CombatAssistModule.setEnabled(SLAM, false);
+            AutoClutchModule.setEnabled(false);
+            player.grounded = true; player.velocity = Vec3.ZERO; player.fallDistance = 0;
+            player.inventory.setSelectedSlot(0);
+            client.hitResult = new EntityHitResult(target);
+            set(Minecraft.class, client, "missTime", 0);
+            for (int cps : new int[]{1, 8, 20}) {
+                var prefs = new dev.lungetest.AutoClickerModule.Preferences(); prefs.cps = cps;
+                dev.lungetest.AutoClickerModule.initialize(prefs);
+                dev.lungetest.AutoClickerModule.setEnabled(true);
+                connection.packets.clear();
+                for (int tick = 0; tick < 40; tick++) dev.lungetest.AutoClickerModule.tick(client);
+                require(attacks(connection) == cps * 2, "Toggle autoclicker generates the requested rate through vanilla clicks: " + cps);
+                dev.lungetest.AutoClickerModule.setEnabled(false);
+            }
+            var prefs = new dev.lungetest.AutoClickerModule.Preferences(); prefs.mode = dev.lungetest.AutoClickerModule.Mode.HOLD; prefs.cps = 20;
+            dev.lungetest.AutoClickerModule.initialize(prefs); dev.lungetest.AutoClickerModule.setEnabled(true);
+            client.options.keyAttack.setDown(false); connection.packets.clear();
+            for (int i = 0; i < 10; i++) dev.lungetest.AutoClickerModule.tick(client);
+            require(attacks(connection) == 0, "Hold autoclicker remains idle without the physical mouse button");
+            client.options.keyAttack.setDown(true);
+            for (int i = 0; i < 5; i++) dev.lungetest.AutoClickerModule.tick(client);
+            require(attacks(connection) == 5, "Hold autoclicker runs while the physical button is held");
+            client.options.keyAttack.setDown(false);
+            for (int i = 0; i < 10; i++) dev.lungetest.AutoClickerModule.tick(client);
+            require(attacks(connection) == 5 && !client.options.keyAttack.isDown(), "Releasing Hold stops generated clicks without a stuck attack key");
+            dev.lungetest.AutoClickerModule.cycleMode();
+            client.screen = new net.minecraft.client.gui.screens.TitleScreen();
+            for (int i = 0; i < 5; i++) dev.lungetest.AutoClickerModule.tick(client);
+            require(attacks(connection) == 5, "Screens suppress autoclicker gameplay actions");
+            client.screen = null;
+            set(Minecraft.class, client, "windowActive", false);
+            for (int i = 0; i < 5; i++) dev.lungetest.AutoClickerModule.tick(client);
+            require(attacks(connection) == 5, "Focus loss suppresses autoclicker gameplay actions");
+            set(Minecraft.class, client, "windowActive", true);
+            dev.lungetest.AutoClickerModule.setEnabled(false);
+            var held = player.inventory.getItem(0).copy();
+            player.inventory.setItem(0, ItemStack.EMPTY);
+            var level = (CombatLevel) client.level;
+            var block = new BlockPos(0, 2, 0);
+            level.states.put(block, Blocks.BEDROCK.defaultBlockState());
+            client.hitResult = new BlockHitResult(new Vec3(.5, 3, .5), Direction.UP, block, false);
+            prefs = new dev.lungetest.AutoClickerModule.Preferences();
+            prefs.button = dev.lungetest.AutoClickerModule.Button.USE; prefs.cps = 1;
+            dev.lungetest.AutoClickerModule.initialize(prefs); dev.lungetest.AutoClickerModule.setEnabled(true);
+            connection.packets.clear();
+            for (int i = 0; i < 40; i++) dev.lungetest.AutoClickerModule.tick(client);
+            require(connection.packets.stream().filter(net.minecraft.network.protocol.game.ServerboundUseItemOnPacket.class::isInstance).count() == 4,
+                    "Right autoclicker enters vanilla startUseItem twice; both ordinary empty-hand block interactions are dispatched");
+            require(attacks(connection) == 0, "Right autoclicker never dispatches left-button entity attacks");
+            player.inventory.setItem(0, held);
+            level.states.remove(block);
+            dev.lungetest.AutoClickerModule.setEnabled(false);
+        } finally {
+            dev.lungetest.AutoClickerModule.initialize(previous);
+            client.options.keyAttack.setDown(false); client.screen = null;
+            set(Minecraft.class, client, "windowActive", true);
+        }
     }
 
     private static void hold(Minecraft client, CombatAssistModule.Feature feature, boolean pressed) {
@@ -1220,11 +1385,13 @@ public final class CombatAssistVerification {
         int predictedAttacks;
         Entity lastPredictedTarget;
         ItemStack lastAttackStack;
+        float lastDisableSeconds;
         private CombatPlayer() { super(null, null, null, null, null, null, false); }
         @Override public Inventory getInventory() { return inventory; }
         @Override public Abilities getAbilities() { return abilities; }
         @Override public ItemCooldowns getCooldowns() { return cooldowns; }
         @Override public ItemStack getMainHandItem() { return inventory.getSelectedItem(); }
+        @Override public ItemStack getWeaponItem() { return getMainHandItem(); }
         @Override public ItemStack getOffhandItem() { return offhand; }
         @Override public ItemStack getItemInHand(InteractionHand hand) {
             return hand == InteractionHand.OFF_HAND ? offhand : inventory.getSelectedItem();
@@ -1263,6 +1430,7 @@ public final class CombatAssistVerification {
             predictedAttacks++;
             lastPredictedTarget = target;
             lastAttackStack = getMainHandItem().copy();
+            lastDisableSeconds = getSecondsToDisableBlocking();
             if (killOnAttack && target instanceof CombatZombie zombie) zombie.alive = false;
         }
     }

@@ -1,10 +1,10 @@
-# Azeium 2.4.4
+# Azeium 2.5.0
 
-Stun Slam starts only when enabled and you click an actively blocking target. Merely holding a shield does not trigger it. The mace follow-up continues after the axe hit even if the shield is then lowered or disabled.
-
-Stun Slam now selects its axe before vanilla routes a spear click. It also takes priority over Auto Mace on valid combo clicks while falling. Cancelled clicks restore the original slot without queuing a combo.
-
-Stun Slam now supports manually clicked survival players, using the same charged axe-to-mace sequence and original-slot return as mob combat. Teammates are supported when team friendly fire is enabled.
+Auto StunSlam is adapted from your uploaded `PrivateStunslamClient` source.
+Enable the module and aim at an actively raised shield: it sends an axe hit,
+then a mace follow-up on the next client tick, returns your slot and tools,
+and waits 12 ticks before retriggering. It supports multiplayer survival
+players and inventory weapons, with normal server reach and damage rules.
 
 Retained from 2.4.1: restoring a saved spear shortcut no longer resolves its keyboard
 label before GLFW initializes. This fixes the reproduced "GLFW library is not
@@ -14,7 +14,7 @@ and shortcuts are retained; no config reset is needed.
 New in 2.4.0: a full shared visual refresh with licensed Allura cursive brand and
 module headings, readable Open Sans controls, satin pastel gradients, rounded
 surfaces, softer highlights and consistent styling across menus and settings.
-Fifteen modules fit across two pages. Performance HUD displays actual client FPS
+Sixteen modules fit across two pages. Performance HUD displays actual client FPS
 and server-reported player latency without sending extra requests. It starts OFF
 and has its own saved toggle bind. Client settings includes Disable all modules.
 
@@ -89,8 +89,8 @@ manual slot changes, death or disconnect stop an armed trial. Other combat/bridg
 modules must be disabled to avoid overlapping trial actions.
 
 Auto Mace exposes Smash, Reach and activation controls. Smash has no queued extra hit.
-Stun Slam has no timing or strategy settings: enable it and click a target actively blocking with a raised shield.
-It automatically attacks with a hotbar axe, then a hotbar mace, using normal charge.
+Stun Slam has no timing or strategy settings: enable it and aim at a target actively blocking with a raised shield.
+It borrows an axe and mace from your main inventory when needed, then sends the uploaded add-on's quick sequence. Server damage rules can reduce the second hit.
 Legacy Stun Slam preferences are ignored when loading existing configurations.
 
 Traces are buffered JSONL files in the instance's `logs/azeium-tests` directory.
@@ -103,7 +103,7 @@ Logs are capped at 12,000 entries per session. Start a new session when needed.
 
 ## Startup compatibility
 
-Azeium 2.4.4 includes MixinExtras **0.5.5** inside its JAR and requires that version
+Azeium 2.5.0 includes MixinExtras **0.5.5** inside its JAR and requires that version
 or newer. This resolves the reproduced `ArrayList cannot be cast to AnnotationNode`
 exception in `FactoryRedirectWrapperMixinTransformer` when MixinExtras 0.5.4
 processes the newer Redirect annotation arrays used with Sponge Mixin 0.17.4.
@@ -118,7 +118,7 @@ validation covers the reproduced library failure and an isolated Fabric client.
 
 Remove previous Spear Controls, Lunge Test Controls, Spear Test Lab, Spear Sprint
 and combined test JARs, including previous Azeium versions. Put
-`azeium-2.4.4-mc1.21.11.jar` in your Minecraft
+`azeium-2.5.0-mc1.21.11.jar` in your Minecraft
 instance's `mods` folder alongside Fabric API. This is a client mod, not a Paper
 plugin. EntityCulling is not included or required.
 
@@ -128,7 +128,7 @@ then use its ON/OFF control. Selecting a module does not enable it.
 The translucent menu's **Opacity** control cycles through **55%, 70% and 85%**;
 the default is **70%**. Use **Menu key** to change the menu binding.
 
-Each of the fifteen modules has its own **Keybind** control. Click it, then press the
+Each of the sixteen modules has its own **Keybind** control. Click it, then press the
 keyboard key to assign. **Escape** cancels capture; **Delete** or **Backspace**
 clears a module binding. Duplicate Azeium module/menu keys are rejected. Module
 bindings start at **None**, fire once per key press, and only work while playing
@@ -257,8 +257,8 @@ sits below Session HUD and avoids the travel/armor panels at tested GUI sizes.
 It sends no probe packets and does not alter networking or game tick speed.
 
 **AutoMace** always uses **Action: Smash**. With more than 1.5 blocks of real
-fall distance and downward movement, your entity attack click selects a hotbar
-mace before that same hit, then restores your previous slot. No second attack
+fall distance and downward movement, your entity attack click selects a
+mace from your hotbar or main inventory before that same hit, then restores your previous slot. No second attack
 or extra recharge delay is added. Grounded, rising and short-fall clicks retain
 the held item. Wind Burst requires an enchanted mace and a successful server hit.
 Your own intervening slot change is preserved. A cancelled vanilla attack also
@@ -269,34 +269,35 @@ Vanilla. Visibility and item cooldowns remain checked. Extended reach applies on
 to an entity already selected by the crosshair: it does not extend crosshair picking.
 The server may reject a distant mace hit even when a spear could reach that entity.
 
-**Auto StunSlam** turns a manual attack on a target actively blocking with a shield into an **Axe + mace**
-combo. It selects a hotbar axe, waits for its normal charge and attacks, then
-switches to a hotbar mace and waits for a charged follow-up. These are two
-separate ordinary attacks; the module does not send an instant double click or
-remove mace/axe cooldowns. An axe can disable an actual blocking shield according
-to vanilla rules. Ordinary zombies and wardens do not block with shields and therefore do not trigger this module.
+**Auto StunSlam** uses the user-supplied Private Stunslam add-on's crosshair
+trigger: enable it and aim at a living entity actively blocking with a raised
+shield. No click or extra activation key is required. It selects an axe and
+sends its hit, then switches to a mace and sends a follow-up on the next client
+tick. It returns your original slot and waits 12 ticks before retriggering.
+An axe and mace may be in the hotbar or main inventory; close other containers.
+Weapons borrowed through ordinary SWAP actions are returned after the combo.
 
-Stun Slam keeps the player or mob you clicked as its target. It needs no extra activation
-key, target selection, timing sliders or mode choices. Its module toggle and optional
-ON/OFF keybind remain available. A new manual click starts each combo.
+The original add-on's singleplayer-only guard is replaced with live-world checks
+so it also works in your multiplayer survival world. Players on teams with
+friendly fire disabled, creative players and spectators are excluded. The module
+stops on death/disconnect/world changes and cancels pending attacks when you
+change slots, open a menu or lose focus. Ordinary zombies and wardens do not
+raise shields and therefore do not trigger this module.
 
-AutoMace defaults to **Automatic** activation. Its optional **Hold key** mode
-requires its **Use key** (default **R**) during the falling hit.
+A successful shield disable still requires normal server acceptance, an actual
+blocking shield, the correct facing direction and a valid axe hit. This quick
+sequence does not wait for full weapon charge or change any server cooldown,
+damage immunity or health. Its mace follow-up can be rejected or deal reduced
+damage; Smash and Wind Burst require real falling conditions. It is not an
+anticheat bypass.
 
-Stun Slam supports manually clicked survival players and hostile mobs. Creative and spectator players, teammates with friendly fire disabled, pets and passive animals are excluded.
-Charged combos require normal item charge, attack reach and line of
-sight. They pause for menus, lost focus, item use or nonstandard movement such as
-flying, riding and swimming. Auto Clutch has priority when it needs to place a
-supply. Charged combos restore the original selected slot after completion or
-cancellation if the helper still controls that slot. Your own hotbar change cancels a queued combo without replacing your
-selection or switching the module OFF. Your next click can start a fresh combo.
-Stun Slam has priority for valid axe-to-mace combo clicks when both modules are enabled, including while falling. Both start OFF on launch and turn OFF on death,
-disconnect or world replacement.
+AutoMace remains a same-click falling Smash helper with original-slot return.
+Its optional Hold key mode requires its Use key (default R) during the falling hit.
 
 The **Liquid Glass** menu uses rounded translucent panels, layered reflections,
 soft hover highlights, quick opening fades, rounded state badges and an animated
 selection rail. Equal glass rows share draw calls, and unchanged button labels
-are reused. Its fifteen module tabs span two pages and fit the minimum 320x240 GUI size.
+are reused. Its sixteen module tabs span two pages and fit the minimum 320x240 GUI size.
 
 ## Rejoin controls
 
@@ -361,3 +362,43 @@ DISPLAY=:99 ./gradlew runGuiVerification
 The display must already be running. The root repository README documents the
 cloud proxy/trust options when dependency downloads need them. Ordinary machines
 do not need those environment-specific options.
+
+## Inventory swaps and shield hits (2.5.0)
+
+Auto Mace and Stun Slam find weapons in inventory slots 9–35 as well as the hotbar.
+They use ordinary inventory SWAP actions to borrow tools, preserve displaced
+hotbar stacks, and return the weapons when finished or cancelled. Close chests and
+other containers and clear the cursor first. Manually moved stacks are preserved;
+returning tools is deferred while another container is open.
+
+Stun Slam requires an actively raised shield when its automatic sequence starts.
+Aim within ordinary axe range, on the shield-facing side of the opponent.
+The server decides whether the shield blocks, is disabled, or accepts either hit.
+Its next-tick mace follow-up uses the uploaded add-on's short timing instead of
+the previous charged manual-click combo. Settings from that older combo are ignored.
+
+## Autoclicker
+
+Open the module on the second Modules page. **Mode** selects **Toggle** (click
+continuously until disabled) or **Hold mouse** (click only while the selected
+mouse action is physically held). **Click** selects left/attack or right/use.
+**Rate** cycles 1, 2, 4, 6, 8, 10, 12, 16 and 20 requested clicks per second.
+Assign its normal module keybind for quick ON/OFF control. Mode, button and rate
+are saved; the module starts OFF on launch and stops on death or world changes.
+Menus, focus loss, held item use and other active gameplay actions pause it.
+It follows client ticks and never catches up with a burst after lag. Normal item
+cooldowns and server hit acceptance still apply. AFK clicking requires the game
+window to retain focus.
+
+Auto Telly now returns the visible view forward during descent once support is
+confirmed, keeps ordinary sprint-jump momentum, and sends its current visible
+rotation before using a block face. It uses blocks in your hotbar/offhand, normal
+reach and ordinary placement. Start on a full block, face your bridge direction,
+select **Auto Telly** in Auto Clutch, enable and close the menu. Do not hold movement
+or attack keys while the pilot runs; manual input stops it. Server placement
+restrictions and lag can still interrupt a bridge; test without risking a hardcore
+world first.
+
+Validation exercises actual Minecraft item prediction, packet ordering, inventory
+swaps, keyboard input, jump impulse, acceleration, crouch edge safety and collision
+in controlled fixtures. These fixtures are not a joined multiplayer-server test.

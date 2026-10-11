@@ -14,8 +14,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /** Prepares a falling mace before held-item attack checks and records ordinary manual attacks. */
 @Mixin(Minecraft.class)
-public abstract class ManualAttackMixin implements SpearAttackAccess {
+public abstract class ManualAttackMixin implements SpearAttackAccess, dev.lungetest.ClickActionAccess {
     @Invoker("startAttack") public abstract boolean azeium$startAttack();
+    @Invoker("startUseItem") public abstract void azeium$startUseItem();
     @Inject(method = "startAttack", at = @At("HEAD"))
     private void azeium$prepareFallingMace(CallbackInfoReturnable<Boolean> info) {
         Minecraft client = (Minecraft) (Object) this;

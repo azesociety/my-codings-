@@ -153,6 +153,11 @@ public final class LungeTestScreen extends AzeiumScreen {
             }
             case AUTO_MACE -> buildCombatControls(x, w, settings);
             case AUTO_STUNSLAM -> { }
+            case AUTO_CLICKER -> {
+                addButton(x, settings, w, 18, AutoClickerModule.modeLabel(), b -> { AutoClickerModule.cycleMode(); selectModule(selected); });
+                addButton(x, settings + 23, w, 18, AutoClickerModule.buttonLabel(), b -> { AutoClickerModule.cycleButton(); selectModule(selected); });
+                addButton(x, settings + 46, w, 18, AutoClickerModule.rateLabel(), b -> { AutoClickerModule.cycleRate(); selectModule(selected); });
+            }
             case AUTO_REJOIN -> {
                 rejoinNow = addButton(x, settings, w, 20, "Rejoin now", b -> AutoRejoinModule.rejoin(minecraft));
                 rejoinNow.setTooltip(hint("Disconnect and reconnect to the current or last multiplayer server using vanilla connection handling."));
@@ -543,10 +548,16 @@ public final class LungeTestScreen extends AzeiumScreen {
                     text(g, "Leaving deliberately stops retries.", x, settings + 98, MUTED, contentWidth);
                 }
             }
+            case AUTO_CLICKER -> {
+                if (!compact()) {
+                    text(g, AutoClickerModule.status(), x, settings + 77, ACCENT, contentWidth);
+                    text(g, "Normal item cooldowns still apply.", x, settings + 100, MUTED, contentWidth);
+                }
+            }
             case AUTO_STUNSLAM -> {
-                text(g, CombatAssistModule.status(CombatAssistModule.Feature.STUNSLAM), x, settings + 3, ACCENT, contentWidth);
-                text(g, "Click a raised shield. Axe, then mace.", x, settings + 24, TEXT, contentWidth);
-                text(g, "Keep both tools in your hotbar.", x, settings + 45, MUTED, contentWidth);
+                text(g, AutoStunSlamModule.status(), x, settings + 3, ACCENT, contentWidth);
+                text(g, "Aim at a raised shield. Axe, then mace.", x, settings + 24, TEXT, contentWidth);
+                text(g, "Tools can be anywhere in your inventory.", x, settings + 45, MUTED, contentWidth);
                 if (!compact()) text(g, "Automatic timing. No extra use key.", x, settings + 75, MUTED, contentWidth);
             }
             case AUTO_MACE -> {

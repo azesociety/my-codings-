@@ -143,6 +143,7 @@ public final class GuiVerification implements ClientModInitializer {
             verifyTracerControls(screen, key);
             verifyClutchControls(screen, key);
             verifyCombatControls(screen, key);
+            verifyAutoclickerControls(screen, key);
             verifyRejoinControls(screen, key);
             verifyOpacityControls(screen, key);
             KeybindVerification.verify(client, screen);
@@ -221,7 +222,7 @@ public final class GuiVerification implements ClientModInitializer {
             RejoinVerification.verify(client);
             ((LungeTestScreen) client.screen).selectModule(AzeiumModules.Module.PLAYER_HIGHLIGHTS);
             installHudRenderingVerification((LungeTestScreen) client.screen);
-            LungeTestClient.LOG.info("GUI_VERIFIED: {} runtime checks passed, including all fifteen modules on two sidebar pages, Auto Mace fixed Smash and bounded reach controls, fixed automatic StunSlam, manual Rejoin key capture, independent colors/ranges, six clutch modes including automatic Telly and three Telly speed presets, keybinds, opacity, export and minimum-size layout without overlaps", checks);
+            LungeTestClient.LOG.info("GUI_VERIFIED: {} runtime checks passed, including all sixteen modules on two sidebar pages, Auto Mace fixed Smash and bounded reach controls, fixed automatic StunSlam, manual Rejoin key capture, independent colors/ranges, six clutch modes including automatic Telly and three Telly speed presets, keybinds, opacity, export and minimum-size layout without overlaps", checks);
         });
     }
     private void installHudRenderingVerification(LungeTestScreen screen) {
@@ -598,10 +599,12 @@ public final class GuiVerification implements ClientModInitializer {
             var module = feature == CombatAssistModule.Feature.MACE
                     ? AzeiumModules.Module.AUTO_MACE : AzeiumModules.Module.AUTO_STUNSLAM;
             screen.selectModule(module);
-            require(!CombatAssistModule.enabled(feature), "Combat modules start OFF: " + feature);
+            require(!module.enabled(), "Combat modules start OFF: " + feature);
             require(!moduleToggle(screen).active, "Combat modules require a live world before enabling");
-            require(CombatAssistModule.status(feature).toLowerCase(Locale.ROOT).contains("off")
-                            || CombatAssistModule.status(feature).toLowerCase(Locale.ROOT).contains("disabled"),
+            String status = feature == CombatAssistModule.Feature.STUNSLAM
+                    ? dev.lungetest.AutoStunSlamModule.status() : CombatAssistModule.status(feature);
+            require(status.toLowerCase(Locale.ROOT).contains("off")
+                            || status.toLowerCase(Locale.ROOT).contains("disabled"),
                     "Disabled combat status is explicit");
             if (feature == CombatAssistModule.Feature.STUNSLAM) {
                 require(buttons(screen).stream().noneMatch(button -> {
@@ -609,8 +612,8 @@ public final class GuiVerification implements ClientModInitializer {
                     return label.startsWith("Activate:") || label.startsWith("Aim:")
                             || label.startsWith("Combo:") || label.startsWith("Use key:");
                 }), "StunSlam has no activation, target, strategy or use-key settings");
-                require(CombatAssistModule.activation(feature) == CombatAssistModule.Activation.AUTOMATIC,
-                        "StunSlam always activates automatically on the manual hit");
+                require(!dev.lungetest.AutoStunSlamModule.busy(),
+                        "Uploaded Stun Slam starts idle without a pending attack");
                 continue;
             }
             var originalActivation = CombatAssistModule.activation(feature);
@@ -651,6 +654,30 @@ public final class GuiVerification implements ClientModInitializer {
             screen.selectModule(module);
             require(!CombatAssistModule.enabled(feature), "Editing combat preferences never arms a module");
         }
+    }
+    private static void verifyAutoclickerControls(LungeTestScreen screen, KeyEvent key) {
+        var previous = new com.google.gson.Gson().fromJson(new com.google.gson.Gson().toJson(
+                dev.lungetest.AutoClickerModule.preferences()), dev.lungetest.AutoClickerModule.Preferences.class);
+        screen.selectModule(AzeiumModules.Module.AUTO_CLICKER);
+        require(!dev.lungetest.AutoClickerModule.enabled(), "Autoclicker starts OFF");
+        for (int i = 0; i < 2; i++) {
+            var before = dev.lungetest.AutoClickerModule.preferences().mode;
+            button(screen, dev.lungetest.AutoClickerModule.modeLabel()).onPress(key);
+            require(dev.lungetest.AutoClickerModule.preferences().mode != before, "Actual UI cycles toggle/hold mode");
+        }
+        for (int i = 0; i < 2; i++) {
+            var before = dev.lungetest.AutoClickerModule.preferences().button;
+            button(screen, dev.lungetest.AutoClickerModule.buttonLabel()).onPress(key);
+            require(dev.lungetest.AutoClickerModule.preferences().button != before, "Actual UI cycles left/right click");
+        }
+        for (int i = 0; i < 9; i++) {
+            int before = dev.lungetest.AutoClickerModule.preferences().cps;
+            button(screen, dev.lungetest.AutoClickerModule.rateLabel()).onPress(key);
+            require(dev.lungetest.AutoClickerModule.preferences().cps != before, "Actual UI cycles supported click rates");
+        }
+        require(!dev.lungetest.AutoClickerModule.enabled(), "Editing autoclicker settings never enables it");
+        dev.lungetest.AutoClickerModule.initialize(previous);
+        LungeTestClient.saveClickerPreferences();
     }
     private static String maceActionButton() {
         return "Action: " + switch (CombatAssistModule.maceAction()) {

@@ -521,6 +521,11 @@ public final class AutoClutchModule {
             acted = true;
             interactionsThisTick++;
             if (plan.telly) lastTellyInteractionTick = ticks;
+            // Automatic Telly turns the visible camera before movement runs. Deliver that
+            // real view before using its checked face, so the server has the current aim.
+            if (mode == Mode.AUTO_TELLY) client.getConnection().send(
+                    new net.minecraft.network.protocol.game.ServerboundMovePlayerPacket.Rot(
+                            player.getYRot(), player.getXRot(), player.onGround(), player.horizontalCollision));
             InteractionResult result = plan.water ? client.gameMode.useItem(player, plan.supply.hand)
                     : client.gameMode.useItemOn(player, plan.supply.hand, plan.hit);
             boolean placed = plan.water ? client.level.getFluidState(plan.target).is(Fluids.WATER)

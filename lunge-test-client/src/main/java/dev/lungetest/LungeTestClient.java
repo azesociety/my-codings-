@@ -78,6 +78,7 @@ public final class LungeTestClient implements ClientModInitializer {
                 .register(client -> CombatTestLog.flush());
         ThemeManager.initialize(settings.theme);
         ShieldDrainerModule.initialize(settings.shieldTest);
+        AutoClickerModule.initialize(settings.clicker);
         METRICS.reset(System.nanoTime());
         ClientTickEvents.START_CLIENT_TICK.register(client -> {
             if (enabled && (client.getConnection() != armedConnection || client.player == null
@@ -93,8 +94,10 @@ public final class LungeTestClient implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             AutoRejoinModule.tick(client);
             SpearQuickLungeModule.tick(client);
+            AutoStunSlamModule.tick(client);
             CombatAssistModule.tick(client);
             ShieldDrainerModule.tick(client);
+            AutoClickerModule.tick(client);
             CombatTestLog.tick();
             SessionHudModule.tick(client);
             if (!syncMetricsContext(client) || !client.player.isAlive() || client.isPaused()
@@ -115,7 +118,7 @@ public final class LungeTestClient implements ClientModInitializer {
                 (message, overlay) -> CombatTestLog.observation(message.getString()));
         net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents.CHAT.register(
                 (message, signed, sender, parameters, received) -> CombatTestLog.observation(message.getString()));
-        LOG.info("Azeium 2.4.4 loaded; the menu key opens modules. Auto Telly can jump, turn and bridge automatically; gameplay helpers start OFF.");
+        LOG.info("Azeium 2.5.0 loaded; the menu key opens modules. Auto Telly can jump, turn and bridge automatically; gameplay helpers start OFF.");
     }
 
     public static boolean isSpear(ItemStack stack) {
@@ -180,7 +183,7 @@ public final class LungeTestClient implements ClientModInitializer {
             var folder = FabricLoader.getInstance().getGameDir().resolve("logs/spearometer");
             Files.createDirectories(folder);
             var report = new JsonObject();
-            report.addProperty("modVersion", "2.4.4");
+            report.addProperty("modVersion", "2.5.0");
             report.addProperty("minecraftVersion", "1.21.11");
             report.addProperty("exportedAt", Instant.now().toString());
             report.addProperty("measurementSource", "client");
@@ -272,6 +275,7 @@ public final class LungeTestClient implements ClientModInitializer {
         settings.shieldTest = ShieldDrainerModule.preferences();
         saveSettings();
     }
+    public static void saveClickerPreferences() { settings.clicker = AutoClickerModule.preferences(); saveSettings(); }
     private static void saveSettings() {
         try {
             Files.createDirectories(CONFIG.getParent());
@@ -316,6 +320,7 @@ public final class LungeTestClient implements ClientModInitializer {
         Map<String, CombatAssistModule.Preferences> combat = new LinkedHashMap<>();
         ThemeManager.Preferences theme = new ThemeManager.Preferences();
         ShieldDrainerModule.Preferences shieldTest = new ShieldDrainerModule.Preferences();
+        AutoClickerModule.Preferences clicker = new AutoClickerModule.Preferences();
         AutoClutchModule.Mode clutchMode = AutoClutchModule.Mode.BOTH;
         AutoClutchModule.TellySpeed tellySpeed = AutoClutchModule.TellySpeed.FAST;
         int clutchRevision;

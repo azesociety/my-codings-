@@ -56,12 +56,12 @@ public final class AzeiumModules {
             }
             public void toggle(Minecraft client) { ShieldDrainerModule.setEnabled(!enabled()); }
         },
-        AUTO_STUNSLAM("Auto StunSlam", "Queue an axe hit followed by a mace hit.") {
-            public boolean enabled() { return CombatAssistModule.enabled(CombatAssistModule.Feature.STUNSLAM); }
+        AUTO_STUNSLAM("Auto StunSlam", "Aim at a raised shield: axe, then mace.") {
+            public boolean enabled() { return AutoStunSlamModule.enabled(); }
             public boolean canToggle(Minecraft client) {
                 return enabled() || client.player != null && client.getConnection() != null && client.player.isAlive();
             }
-            public void toggle(Minecraft client) { CombatAssistModule.setEnabled(CombatAssistModule.Feature.STUNSLAM, !enabled()); }
+            public void toggle(Minecraft client) { AutoStunSlamModule.setEnabled(!enabled()); }
         },
         AUTO_REJOIN("Auto Rejoin", "Reconnect after a lost server connection.") {
             public boolean enabled() { return AutoRejoinModule.enabled(); }
@@ -82,6 +82,13 @@ public final class AzeiumModules {
         PERFORMANCE_HUD("Performance HUD", "View live FPS and reported server latency.") {
             public boolean enabled() { return PerformanceHudModule.enabled(); }
             public void toggle(Minecraft client) { PerformanceHudModule.setEnabled(!enabled()); }
+        },
+        AUTO_CLICKER("Autoclicker", "Repeated left or right clicks: toggle or hold.") {
+            public boolean enabled() { return AutoClickerModule.enabled(); }
+            public boolean canToggle(Minecraft client) {
+                return enabled() || client.player != null && client.getConnection() != null && client.player.isAlive();
+            }
+            public void toggle(Minecraft client) { AutoClickerModule.setEnabled(!enabled()); }
         };
         private final String label;
         private final String description;

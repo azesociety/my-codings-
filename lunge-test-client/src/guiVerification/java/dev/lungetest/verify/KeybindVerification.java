@@ -121,7 +121,7 @@ public final class KeybindVerification {
             client.screen = null;
             int[] keys = {GLFW.GLFW_KEY_F5, GLFW.GLFW_KEY_F6, GLFW.GLFW_KEY_F8,
                     GLFW.GLFW_KEY_F7, GLFW.GLFW_KEY_F10, GLFW.GLFW_KEY_O, GLFW.GLFW_KEY_P,
-                    GLFW.GLFW_KEY_F11, GLFW.GLFW_KEY_F12, GLFW.GLFW_KEY_F13, GLFW.GLFW_KEY_F14, GLFW.GLFW_KEY_F15, GLFW.GLFW_KEY_F16, GLFW.GLFW_KEY_F17, GLFW.GLFW_KEY_F19};
+                    GLFW.GLFW_KEY_F11, GLFW.GLFW_KEY_F12, GLFW.GLFW_KEY_F13, GLFW.GLFW_KEY_F14, GLFW.GLFW_KEY_F15, GLFW.GLFW_KEY_F16, GLFW.GLFW_KEY_F17, GLFW.GLFW_KEY_F19, GLFW.GLFW_KEY_F20};
             for (var module : AzeiumModules.Module.values()) {
                 require(AzeiumKeybinds.bind(module, keys[module.ordinal()]),
                         "Each module receives an independent gameplay key: " + module);
