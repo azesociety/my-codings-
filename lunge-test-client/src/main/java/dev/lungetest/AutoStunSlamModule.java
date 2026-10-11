@@ -64,6 +64,11 @@ public final class AutoStunSlamModule {
             cancel(client); retriggerDelay = prefs.retriggerTicks; status = "Cancelled: you changed slots"; return;
         }
         if (pendingTarget != null) {
+            if (!valid(client, pendingTarget) || !client.player.hasLineOfSight(pendingTarget)
+                    || !client.player.isWithinEntityInteractionRange(pendingTarget.getBoundingBox(), 0)) {
+                cancel(client); retriggerDelay = prefs.retriggerTicks;
+                status = "Cancelled: target died, left reach or moved behind a wall"; return;
+            }
             if (--followUpIn > 0) return;
             LivingEntity target = pendingTarget;
             int mace = find(client, false);
@@ -81,7 +86,7 @@ public final class AutoStunSlamModule {
             status = "Aim at a raised shield"; return;
         }
         // Check ordinary axe reach before borrowing anything from the inventory.
-        if (!client.player.hasLineOfSight(target) || client.player.distanceToSqr(target) > 16) {
+        if (!client.player.hasLineOfSight(target) || !client.player.isWithinEntityInteractionRange(target.getBoundingBox(), 0)) {
             status = "Move within axe reach and sight"; return;
         }
         if (!inventory.ensure(client, stack -> stack.getItem() instanceof AxeItem || stack.is(ItemTags.AXES),
@@ -97,6 +102,12 @@ public final class AutoStunSlamModule {
         pendingTarget = target;
         followUpIn = prefs.followUpTicks;
         status = "Axe hit sent; mace in " + followUpIn + " ticks";
+    }
+    public static void yieldForManualAttack(Minecraft client) {
+        if (!busy() || dispatching) return;
+        cancel(client);
+        retriggerDelay = prefs.retriggerTicks;
+        status = "Manual mace hit took priority";
     }
     private static boolean valid(Minecraft client, LivingEntity target) {
         if (target == null || target == client.player || !target.isAlive() || target.level() != client.level

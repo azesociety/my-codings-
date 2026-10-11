@@ -1,4 +1,4 @@
-# aze's hub 2.5.1
+# aze's hub 2.5.2
 
 Auto StunSlam is adapted from your uploaded `PrivateStunslamClient` source.
 Enable the module and aim at an actively raised shield: it sends an axe hit,
@@ -118,7 +118,7 @@ validation covers the reproduced library failure and an isolated Fabric client.
 
 Remove previous Spear Controls, Lunge Test Controls, Spear Test Lab, Spear Sprint
 and combined test JARs, including previous aze's hub versions. Put
-`azes-hub-2.5.1-mc1.21.11.jar` in your Minecraft
+`azes-hub-2.5.2-mc1.21.11.jar` in your Minecraft
 instance's `mods` folder alongside Fabric API. This is a client mod, not a Paper
 plugin. EntityCulling is not included or required.
 
@@ -417,3 +417,21 @@ Saved toggles restore when you join another server or world or restart Minecraft
 Gameplay modules resume once a live player exists and their normal conditions
 are met. Death/disconnect still cancels pending attacks and inventory loans.
 **Disable all modules** also saves OFF for every module.
+
+## Combat reliability (2.5.2)
+
+Auto Mace now prepares the mace on both Minecraft's click handler and the normal
+game-mode attack entry point. Each hit uses the mace before its ordinary attack
+packet, then restores your previous slot and returns borrowed inventory weapons.
+It requires a real descending fall over 1.5 blocks, a live world, normal reach
+and a mace in your inventory. **Activate: Automatic** needs no extra key;
+**Hold key** also requires the configured Use key. A slow negative vertical speed
+is now sufficient when vanilla Smash conditions are satisfied.
+
+A deliberate falling Auto Mace click cancels and takes over a pending automatic
+Stun Slam, without a duplicate delayed mace attack. Stun Slam also cancels promptly
+when its target dies, leaves ordinary reach or moves behind a wall. Shields
+outside ordinary axe reach no longer cause repeated inventory borrowing. Existing
+Stun Slam timing controls, inventory return and saved module toggles are retained.
+
+These checks do not guarantee accepted damage or shield disables on your server.

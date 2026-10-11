@@ -1,8 +1,8 @@
-# aze's hub 2.5.1
+# aze's hub 2.5.2
 
 Minecraft Java 1.21.11 · Fabric Loader 0.19.3+ · Java 21 · Fabric API.
 
-- [Download the mod JAR](https://github.com/azesociety/my-codings-/raw/refs/heads/main/azes-hub-2.5.1-mc1.21.11.jar)
+- [Download the mod JAR](https://github.com/azesociety/my-codings-/raw/refs/heads/main/azes-hub-2.5.2-mc1.21.11.jar)
 - [Browse the source project](lunge-test-client/)
 - [Installation and controls](lunge-test-client/README.md)
 
@@ -10,7 +10,7 @@ Replace the older aze's hub JAR in your instance's mods folder. Build the source
 with Java 21 using `gradlew.bat build` (Windows) or `./gradlew build` (Linux/macOS)
 inside `lunge-test-client`. The first build downloads dependencies.
 
-New in 2.5.1: the client is renamed to aze's hub, Stun Slam offers saved tick delays, and all module ON/OFF toggles persist across joins and restarts.
+New in 2.5.2: Auto Mace also swaps on direct game-mode attacks, supports slow descending Smash hits and takes priority over a pending automatic Stun Slam on your deliberate falling click. Stun Slam cancels invalid targets promptly and avoids inventory swaps on out-of-reach shields.
 
 Stun Slam now uses your uploaded add-on's automatic crosshair behavior: enable it and aim at an actively raised shield. It attacks with an axe, follows with a mace after the configured number of client ticks, returns your slot, and waits the configured repeat delay before retriggering. It supports normal multiplayer players and inventory weapons. Server damage rules still apply.
 
@@ -39,3 +39,21 @@ Saved toggles restore when you join another server or world or restart Minecraft
 Gameplay modules resume once a live player exists and their normal conditions
 are met. Death/disconnect still cancels pending attacks and inventory loans.
 **Disable all modules** also saves OFF for every module.
+
+## Combat reliability (2.5.2)
+
+Auto Mace now prepares the mace on both Minecraft's click handler and the normal
+game-mode attack entry point. Each hit uses the mace before its ordinary attack
+packet, then restores your previous slot and returns borrowed inventory weapons.
+It requires a real descending fall over 1.5 blocks, a live world, normal reach
+and a mace in your inventory. **Activate: Automatic** needs no extra key;
+**Hold key** also requires the configured Use key. A slow negative vertical speed
+is now sufficient when vanilla Smash conditions are satisfied.
+
+A deliberate falling Auto Mace click cancels and takes over a pending automatic
+Stun Slam, without a duplicate delayed mace attack. Stun Slam also cancels promptly
+when its target dies, leaves ordinary reach or moves behind a wall. Shields
+outside ordinary axe reach no longer cause repeated inventory borrowing. Existing
+Stun Slam timing controls, inventory return and saved module toggles are retained.
+
+These checks do not guarantee accepted damage or shield disables on your server.

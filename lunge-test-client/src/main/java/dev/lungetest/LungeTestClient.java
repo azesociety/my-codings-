@@ -120,7 +120,7 @@ public final class LungeTestClient implements ClientModInitializer {
                 (message, overlay) -> CombatTestLog.observation(message.getString()));
         net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents.CHAT.register(
                 (message, signed, sender, parameters, received) -> CombatTestLog.observation(message.getString()));
-        LOG.info("aze's hub 2.5.1 loaded; the menu key opens modules. Auto Telly can jump, turn and bridge automatically; saved module toggles resume in live worlds.");
+        LOG.info("aze's hub 2.5.2 loaded; the menu key opens modules. Auto Telly can jump, turn and bridge automatically; saved module toggles resume in live worlds.");
     }
 
     public static boolean isSpear(ItemStack stack) {
@@ -185,7 +185,7 @@ public final class LungeTestClient implements ClientModInitializer {
             var folder = FabricLoader.getInstance().getGameDir().resolve("logs/spearometer");
             Files.createDirectories(folder);
             var report = new JsonObject();
-            report.addProperty("modVersion", "2.5.1");
+            report.addProperty("modVersion", "2.5.2");
             report.addProperty("minecraftVersion", "1.21.11");
             report.addProperty("exportedAt", Instant.now().toString());
             report.addProperty("measurementSource", "client");

@@ -256,6 +256,31 @@ public final class CombatAssistVerification {
                 require(player.fallDistance == 2.5 && player.velocity.equals(new Vec3(0, -.5, 0)),
                         "Preparing a falling mace does not rewrite fall distance or velocity");
             }
+            restart(client, player, connection, MACE);
+            player.inventory.setItem(0, new ItemStack(Items.DIAMOND_SPEAR));
+            client.gameMode.attack(player, zombie);
+            require(attacks(connection) == 1 && player.lastAttackStack.is(Items.MACE) && player.inventory.getSelectedSlot() == 0,
+                    "Direct game-mode attack also swaps before the hit and restores the slot, without relying on Minecraft.startAttack");
+            var inventoryBefore = new ArrayList<ItemStack>();
+            for (int i = 0; i < 36; i++) inventoryBefore.add(player.inventory.getItem(i).copy());
+            try {
+                for (int i = 1; i < 9; i++) player.inventory.setItem(i, new ItemStack(Items.COBBLESTONE, 64));
+                player.inventory.setItem(31, new ItemStack(Items.MACE));
+                restart(client, player, connection, MACE);
+                player.velocity = new Vec3(0, -.01, 0); player.fallDistance = 2.5;
+                missTime.setInt(client, 0); client.hitResult = new EntityHitResult(zombie);
+                startAttack.invoke(client);
+                require(attacks(connection) == 1 && player.lastAttackStack.is(Items.MACE),
+                        "A slow but genuinely descending Smash click borrows its mace from inventory even with a full hotbar");
+                require(player.inventory.getItem(31).is(Items.MACE) && player.inventory.getSelectedSlot() == 0
+                                && connection.packets.stream().filter(net.minecraft.network.protocol.game.ServerboundContainerClickPacket.class::isInstance).count() == 2,
+                        "Inventory-backed Auto Mace sends real borrow/return SWAP packets and restores its original inventory cell");
+                for (int i = 1; i < 9; i++) require(player.inventory.getItem(i).is(Items.COBBLESTONE) && player.inventory.getItem(i).getCount() == 64,
+                        "Inventory Auto Mace preserves every full hotbar stack");
+            } finally {
+                for (int i = 0; i < 36; i++) player.inventory.setItem(i, inventoryBefore.get(i));
+                player.velocity = new Vec3(0, -.5, 0);
+            }
             player.inventory.setItem(0, new ItemStack(Items.WIND_CHARGE));
             for (String condition : List.of("ground", "rising", "short fall")) {
                 restart(client, player, connection, MACE);
@@ -1214,6 +1239,19 @@ public final class CombatAssistVerification {
                             && player.inventory.getSelectedSlot() == 0 && player.inventory.getItem(12).is(Items.DIAMOND_AXE),
                     "Opening a screen cancels the uploaded sequence and returns borrowed items without a mace attack");
             dev.lungetest.AutoStunSlamModule.setEnabled(false);
+            connection.packets.clear();
+            dev.lungetest.AutoStunSlamModule.setEnabled(true); dev.lungetest.AutoStunSlamModule.tick(client);
+            require(attacks(connection) == 1 && dev.lungetest.AutoStunSlamModule.busy(), "Manual takeover fixture starts with the uploaded automatic axe hit");
+            CombatAssistModule.setEnabled(MACE, true);
+            player.grounded = false; player.velocity = new Vec3(0, -.5, 0); player.fallDistance = 2.5;
+            set(Minecraft.class, client, "missTime", 0);
+            ((dev.lungetest.SpearAttackAccess) client).azeium$startAttack();
+            require(attacks(connection) == 2 && player.lastAttackStack.is(Items.MACE) && player.inventory.getSelectedSlot() == 0
+                            && !dev.lungetest.AutoStunSlamModule.busy(), "A deliberate falling click takes over a pending Stun Slam and lands one mace hit");
+            dev.lungetest.AutoStunSlamModule.tick(client);
+            require(attacks(connection) == 2, "The cancelled automatic follow-up does not duplicate the manual mace hit");
+            CombatAssistModule.setEnabled(MACE, false); dev.lungetest.AutoStunSlamModule.setEnabled(false);
+            player.grounded = true; player.velocity = Vec3.ZERO; player.fallDistance = 0;
             var timing = new dev.lungetest.AutoStunSlamModule.Preferences();
             timing.followUpTicks = 5; timing.retriggerTicks = 20;
             dev.lungetest.AutoStunSlamModule.initialize(timing);
@@ -1228,6 +1266,17 @@ public final class CombatAssistVerification {
             dev.lungetest.AutoStunSlamModule.tick(client);
             require(attacks(connection) == 3, "Custom repeat delay permits the next combo afterward");
             dev.lungetest.AutoStunSlamModule.setEnabled(false);
+            dev.lungetest.AutoStunSlamModule.setEnabled(true); connection.packets.clear();
+            dev.lungetest.AutoStunSlamModule.tick(client); target.alive = false;
+            dev.lungetest.AutoStunSlamModule.tick(client);
+            require(attacks(connection) == 1 && !dev.lungetest.AutoStunSlamModule.busy() && player.inventory.getSelectedSlot() == 0,
+                    "A dead target releases the five-tick pending combo immediately instead of blocking other weapon swaps");
+            target.alive = true; dev.lungetest.AutoStunSlamModule.setEnabled(false);
+            locate(target, new Vec3(.5, 3, 4.5)); connection.packets.clear();
+            dev.lungetest.AutoStunSlamModule.setEnabled(true);
+            for (int i = 0; i < 10; i++) dev.lungetest.AutoStunSlamModule.tick(client);
+            require(connection.packets.isEmpty(), "Out-of-axe-reach shields do not repeatedly borrow inventory tools or send selection packets");
+            locate(target, new Vec3(.5, 3, 2.5)); dev.lungetest.AutoStunSlamModule.setEnabled(false);
             dev.lungetest.AutoStunSlamModule.initialize(new dev.lungetest.AutoStunSlamModule.Preferences());
             var settingsField = LungeTestClient.class.getDeclaredField("settings"); settingsField.setAccessible(true);
             var settingsObject = settingsField.get(null);

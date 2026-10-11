@@ -379,7 +379,7 @@ public final class CombatAssistModule {
                 && !player.cannotAttackWithItem(stack, 0) && !player.getCooldowns().isOnCooldown(stack);
     }
     private static boolean falling(LocalPlayer player) {
-        return !player.onGround() && player.getDeltaMovement().y < -0.05 && MaceItem.canSmashAttack(player);
+        return !player.onGround() && player.getDeltaMovement().y < 0 && MaceItem.canSmashAttack(player);
     }
     private static int maceSlot(LocalPlayer player) { return itemSlot(player, Items.MACE); }
     private static int itemSlot(LocalPlayer player, net.minecraft.world.item.Item item) {
@@ -493,11 +493,14 @@ public final class CombatAssistModule {
 
     /** Prepares Stun Slam first, otherwise selects the mace for a falling click. */
     public static boolean prepareManualAttack(Minecraft client, Entity target) {
-        if (AutoStunSlamModule.busy() || AutoStunSlamModule.dispatching()) return false;
+        if (dispatching || AutoStunSlamModule.dispatching()) return false;
         if (prepareStunSlamAttack(client, target)) return false;
         State state = STATES.get(Feature.MACE);
         if (dispatching || state.prefs.maceAction != MaceAction.FALLING_SMASH
-                || !canSwap(client, state, target) || !ready(client, state) || !falling(client.player)) return false;
+                || !canSwap(client, state, target) || !ready(client, state)) return false;
+        if (!falling(client.player)) { state.status = "Needs a real fall over 1.5 blocks; click while descending"; return false; }
+        if (AutoClutchModule.actedThisTick() || TellyPilotModule.active()) { state.status = "Block placement has priority"; return false; }
+        AutoStunSlamModule.yieldForManualAttack(client);
         if (!state.inventory.ensure(client, stack -> stack.is(Items.MACE))) {
             state.status = "Need a mace in inventory; close other containers"; return false;
         }
@@ -575,6 +578,7 @@ public final class CombatAssistModule {
     }
     /** Restore only our temporary selection; never overwrite a user's subsequent scroll. */
     public static void finishManualAttack(Minecraft client) {
+        if (dispatching || AutoStunSlamModule.dispatching()) return;
         State slam = STATES.get(Feature.STUNSLAM);
         // A blocked vanilla click never reaches the game-mode hook that queues the combo.
         if (!slam.queued) releaseSlot(client, slam);

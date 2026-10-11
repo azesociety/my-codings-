@@ -18,10 +18,16 @@ public abstract class CombatAttackMixin implements HotbarSyncAccess {
     @Invoker("ensureHasSentCarriedItem") public abstract void azeium$syncCarriedItem();
     @Inject(method = "attack", at = @At("HEAD"), cancellable = true)
     private void azeium$beginCombo(Player player, Entity target, CallbackInfo ci) {
-        if (CombatAssistModule.beginManualAttack(Minecraft.getInstance(), target)) ci.cancel();
+        Minecraft client = Minecraft.getInstance();
+        if (player != client.player) return;
+        if (CombatAssistModule.beginManualAttack(client, target)) ci.cancel();
+        else CombatAssistModule.prepareManualAttack(client, target);
     }
     @Inject(method = "attack", at = @At("TAIL"))
     private void azeium$prepareMace(Player player, Entity target, CallbackInfo ci) {
-        CombatAssistModule.onManualAttack(Minecraft.getInstance(), target);
+        Minecraft client = Minecraft.getInstance();
+        if (player != client.player) return;
+        CombatAssistModule.onManualAttack(client, target);
+        CombatAssistModule.finishManualAttack(client);
     }
 }
