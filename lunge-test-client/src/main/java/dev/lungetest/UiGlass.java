@@ -42,8 +42,8 @@ final class UiGlass {
         }
     }
 
-    static int surfaceTop() { return ThemeManager.mix(0xFF101521, ThemeManager.first(), .10F); }
-    static int surfaceBottom() { return ThemeManager.mix(0xFF090F19, ThemeManager.second(), .06F); }
+    static int surfaceTop() { return ThemeManager.mix(0xFF171622, ThemeManager.first(), .10F); }
+    static int surfaceBottom() { return ThemeManager.mix(0xFF0E1019, ThemeManager.second(), .06F); }
     static int opacity() { return Math.clamp(120 + Math.round(LungeTestClient.uiOpacity() * 1.25F), 0, 255); }
     static int fade(int color, float amount) {
         return ThemeManager.alpha(color, Math.round((color >>> 24) * Math.clamp(amount, 0, 1)));
@@ -52,22 +52,26 @@ final class UiGlass {
         return value + (target - value) * (1 - (float) Math.exp(-Math.clamp(seconds, 0, .1F) * 16));
     }
     static void panel(GuiGraphics g, int x, int y, int w, int h, float reveal) {
-        rounded(g, x - 7, y + 6, w + 14, h + 6, 20, fade(0x11000000, reveal));
-        rounded(g, x - 3, y + 3, w + 6, h + 3, 17, fade(0x28000000, reveal));
-        gradient(g, x, y, w, h, 14, fade(0x657C899E, reveal), fade(0x28424B60, reveal));
-        gradient(g, x + 1, y + 1, w - 2, h - 2, 13,
+        rounded(g, x - 10, y + 10, w + 20, h + 5, 23, fade(0x16000000, reveal));
+        rounded(g, x - 5, y + 5, w + 10, h + 4, 20, fade(0x36000000, reveal));
+        gradient(g, x, y, w, h, 17, fade(ThemeManager.alpha(ThemeManager.first(), 105), reveal),
+                fade(ThemeManager.alpha(ThemeManager.second(), 45), reveal));
+        gradient(g, x + 1, y + 1, w - 2, h - 2, 16,
                 fade(ThemeManager.alpha(surfaceTop(), opacity()), reveal),
                 fade(ThemeManager.alpha(surfaceBottom(), opacity()), reveal));
-        gradient(g, x + 2, y + 2, w - 4, 34, 12, fade(0x0FFFFFFF, reveal), 0x00FFFFFF);
+        gradient(g, x + 2, y + 2, w - 4, 36, 15, fade(0x12FFFFFF, reveal), 0x00FFFFFF);
     }
     static void button(GuiGraphics g, int x, int y, int w, int h, float hover,
                        boolean selected, boolean active, float reveal) {
-        int tint = ThemeManager.mix(surfaceTop(), ThemeManager.first(), selected ? .28F : .08F + hover * .08F);
-        int rim = selected ? ThemeManager.alpha(ThemeManager.first(), 85) : ThemeManager.alpha(0xFFBCC9DD, Math.round(21 + hover * 26));
-        gradient(g, x, y, w, h, 6, fade(rim, reveal), fade(ThemeManager.alpha(rim, 15), reveal));
-        gradient(g, x + 1, y + 1, w - 2, h - 2, 5,
-                fade(ThemeManager.alpha(tint, active ? Math.round(145 + hover * 30) : 92), reveal),
-                fade(ThemeManager.alpha(surfaceBottom(), active ? 110 : 75), reveal));
+        int tint = ThemeManager.mix(surfaceTop(), ThemeManager.first(), selected ? .36F : .12F + hover * .12F);
+        int rim = ThemeManager.alpha(selected ? ThemeManager.first() : 0xFFCFC7DA,
+                selected ? 110 : Math.round(17 + hover * 28));
+        gradient(g, x, y, w, h, 9, fade(rim, reveal), fade(ThemeManager.alpha(rim, 12), reveal));
+        gradient(g, x + 1, y + 1, w - 2, h - 2, 8,
+                fade(ThemeManager.alpha(tint, active ? Math.round(155 + hover * 38) : 95), reveal),
+                fade(ThemeManager.alpha(surfaceBottom(), active ? 135 : 78), reveal));
+        if (hover > .05F && active) gradient(g, x + 3, y + 2, w - 6, Math.max(1, h / 3), 5,
+                fade(0x0CFFFFFF, hover * reveal), 0x00FFFFFF);
     }
     static void rounded(GuiGraphics g, int x, int y, int w, int h, int r, int color) {
         gradient(g, x, y, w, h, r, color, color);

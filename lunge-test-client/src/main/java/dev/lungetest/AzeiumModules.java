@@ -4,6 +4,9 @@ import net.minecraft.client.Minecraft;
 /** Selecting a module never changes its state. */
 public final class AzeiumModules {
     private AzeiumModules() { }
+    public static void disableAll(Minecraft client) {
+        for (Module module : Module.values()) if (module.enabled()) module.toggle(client);
+    }
     public enum Module {
         SPEAR("Spear", "Remove the local spear cooldown.") {
             public boolean enabled() { return LungeTestClient.enabled(); }
@@ -75,6 +78,10 @@ public final class AzeiumModules {
         SESSION_HUD("Session HUD", "Track active play time and session travel.") {
             public boolean enabled() { return SessionHudModule.enabled(); }
             public void toggle(Minecraft client) { SessionHudModule.setEnabled(!enabled()); }
+        },
+        PERFORMANCE_HUD("Performance HUD", "View live FPS and reported server latency.") {
+            public boolean enabled() { return PerformanceHudModule.enabled(); }
+            public void toggle(Minecraft client) { PerformanceHudModule.setEnabled(!enabled()); }
         };
         private final String label;
         private final String description;

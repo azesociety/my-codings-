@@ -3,13 +3,13 @@ package dev.lungetest;
 /** Shared, readable gradient palettes for the menu, settings and HUD. */
 public final class ThemeManager {
     public enum Theme {
-        AURORA("Aurora", 0xFF9E8CFF, 0xFF62DDD4),
-        OCEAN("Ocean", 0xFF54B8FF, 0xFF82E5D4),
-        SUNSET("Sunset", 0xFFFF9B74, 0xFFD689E8),
-        ROSE("Rose", 0xFFFF86B2, 0xFFB09DFF),
+        AURORA("Aurora", 0xFFC1A7F0, 0xFFADD9D0),
+        OCEAN("Ocean", 0xFF91C8EC, 0xFFB0DCCE),
+        SUNSET("Sunset", 0xFFF0BEA7, 0xFFD7B0DF),
+        ROSE("Rose", 0xFFECB5CB, 0xFFC8B9EE),
         FOREST("Forest", 0xFF88DBA6, 0xFFC7D78A),
         MONO("Graphite", 0xFFCFD8E8, 0xFF8999B5),
-        CUSTOM("Custom", 0xFF9E8CFF, 0xFF62DDD4);
+        CUSTOM("Custom", 0xFFC1A7F0, 0xFFADD9D0);
         public final String label;
         public final int first, second;
         Theme(String label, int first, int second) { this.label = label; this.first = first; this.second = second; }

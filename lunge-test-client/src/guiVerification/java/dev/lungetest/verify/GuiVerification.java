@@ -2,6 +2,7 @@ package dev.lungetest.verify;
 import dev.lungetest.LungeTestClient;
 import dev.lungetest.LungeTestScreen;
 import dev.lungetest.AzeiumModules;
+import dev.lungetest.PerformanceHudModule;
 import dev.lungetest.AzeiumKeybinds;
 import dev.lungetest.PlayerHighlightModule;
 import dev.lungetest.PlayerTracerModule;
@@ -201,6 +202,9 @@ public final class GuiVerification implements ClientModInitializer {
 
             MenuInteractionVerification.verify(client);
             ClientSettingsVerification.verify(client);
+            PerformanceHudModule.setEnabled(true);
+            AzeiumModules.disableAll(client);
+            require(java.util.Arrays.stream(AzeiumModules.Module.values()).noneMatch(AzeiumModules.Module::enabled), "Disable all clears every module without arming another");
             CooldownVerification.verify(client);
             ManualAttackVerification.verify(client);
             SpearQuickLungeVerification.verify(client);
@@ -216,7 +220,7 @@ public final class GuiVerification implements ClientModInitializer {
             RejoinVerification.verify(client);
             ((LungeTestScreen) client.screen).selectModule(AzeiumModules.Module.PLAYER_HIGHLIGHTS);
             installHudRenderingVerification((LungeTestScreen) client.screen);
-            LungeTestClient.LOG.info("GUI_VERIFIED: {} runtime checks passed, including all fourteen modules on two sidebar pages, Auto Mace fixed Smash and bounded reach controls, fixed automatic StunSlam, manual Rejoin key capture, independent colors/ranges, six clutch modes including automatic Telly and three Telly speed presets, keybinds, opacity, export and minimum-size layout without overlaps", checks);
+            LungeTestClient.LOG.info("GUI_VERIFIED: {} runtime checks passed, including all fifteen modules on two sidebar pages, Auto Mace fixed Smash and bounded reach controls, fixed automatic StunSlam, manual Rejoin key capture, independent colors/ranges, six clutch modes including automatic Telly and three Telly speed presets, keybinds, opacity, export and minimum-size layout without overlaps", checks);
         });
     }
     private void installHudRenderingVerification(LungeTestScreen screen) {

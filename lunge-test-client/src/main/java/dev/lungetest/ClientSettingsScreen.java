@@ -62,6 +62,7 @@ public final class ClientSettingsScreen extends AzeiumScreen {
                 });
                 button(x, 108, w, "New log session", ignored -> { CombatTestLog.begin("Manual"); notice = "Logs: logs/azeium-tests"; });
                 button(x, 130, w, "Flush action log", ignored -> { CombatTestLog.flush(); notice = "Buffered events saved"; });
+                button(x, 152, w, "Disable all modules", ignored -> { AzeiumModules.disableAll(minecraft); notice = "All modules disabled"; });
             }
             case THEMES -> {
                 int cell = (w - 8) / 3;
@@ -170,9 +171,9 @@ public final class ClientSettingsScreen extends AzeiumScreen {
         UiGlass.panel(g, x - 8, top(), w + 16, windowHeight(), reveal);
         UiGlass.gradient(g, x, top() + 60, w, windowHeight() - 93, 9, 0x17070B13, 0x30070B13);
         g.fill(x + 4, top() + 29, x + w - 4, top() + 30, 0x1DBCCADD);
-        UiTypography.draw(g, font, "azeium", x + 4, top() + 11, ThemeManager.text(), false);
+        UiTypography.heading(g, font, "azeium", x + 4, top() + 5, ThemeManager.text(), 56);
         UiTypography.draw(g, font, "/ " + (page == Page.TESTS ? "Test scenarios" : page == Page.THEMES ? "Themes" : "Client"),
-                x + 47, top() + 11, ThemeManager.muted(), false);
+                x + 68, top() + 11, ThemeManager.muted(), false);
         if (page == Page.THEMES) {
             int previewHeight = Math.min(30, bottom() - 44 - (top() + 165));
             UiGlass.gradient(g, x, top() + 165, w, previewHeight, 8,

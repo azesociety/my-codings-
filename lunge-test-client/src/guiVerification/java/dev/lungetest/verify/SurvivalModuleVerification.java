@@ -20,7 +20,7 @@ import sun.misc.Unsafe;
 public final class SurvivalModuleVerification {
     public static void verify(Minecraft client) {
         var oldPlayer = client.player; var oldLevel = client.level; var oldScreen = client.screen;
-        boolean armor = ArmorAlertsModule.enabled(), bright = FullbrightModule.enabled(), session = SessionHudModule.enabled();
+        boolean armor = ArmorAlertsModule.enabled(), bright = FullbrightModule.enabled(), session = SessionHudModule.enabled(), performance = PerformanceHudModule.enabled();
         int threshold = ArmorAlertsModule.threshold(), checks = 0;
         boolean hud = LungeTestClient.hudEnabled();
         var hudMode = LungeTestClient.hudMode(); var hudCorner = LungeTestClient.hudCorner();
@@ -57,7 +57,7 @@ public final class SurvivalModuleVerification {
             require(menu.modulePage() == 0 && button(menu, "Previous").active == false && button(menu, "Next").active, "First sidebar page exposes navigation"); checks++;
             button(menu, "Next").onPress(new KeyEvent(GLFW.GLFW_KEY_ENTER, 0, 0));
             require(menu.modulePage() == 1 && !button(menu, "Next").active && button(menu, "Previous").active, "Second sidebar page exposes new modules without changing enabled states"); checks++;
-            for (var module : new AzeiumModules.Module[]{AzeiumModules.Module.ARMOR_ALERTS,AzeiumModules.Module.FULLBRIGHT,AzeiumModules.Module.SESSION_HUD}) {
+            for (var module : new AzeiumModules.Module[]{AzeiumModules.Module.ARMOR_ALERTS,AzeiumModules.Module.FULLBRIGHT,AzeiumModules.Module.SESSION_HUD,AzeiumModules.Module.PERFORMANCE_HUD}) {
                 menu.selectModule(module); require(menu.modulePage() == 1 && button(menu, module.label()) != null, "New module reachable at minimum size: " + module); checks++;
                 boolean before = module.enabled(); button(menu, before ? "Disable module" : "Enable module").onPress(new KeyEvent(GLFW.GLFW_KEY_ENTER, 0, 0));
                 require(module.enabled() != before, "Actual toggle operates " + module); checks++;
@@ -76,14 +76,18 @@ public final class SurvivalModuleVerification {
                 var spear = SpearometerHud.panelBounds(width, 240, mode, corner);
                 var sessionBounds = SessionHudModule.panelBounds(width, 240);
                 var armorBounds = ArmorAlertsModule.panelBounds(width, 240);
+                var performanceBounds = PerformanceHudModule.panelBounds(width, 240);
+                require(!overlap(performanceBounds, spear) && !overlap(performanceBounds, sessionBounds) && !overlap(performanceBounds, armorBounds), "Performance HUD avoids existing HUDs at every tested width/corner"); checks++;
                 require(!overlap(spear, sessionBounds) && !overlap(spear, armorBounds) && !overlap(sessionBounds, armorBounds),
                         "New HUDs avoid each other and spearometer at width " + width + ", " + mode + "/" + corner); checks++;
                 require(sessionBounds.width() >= 100 && armorBounds.width() >= 100, "Compact HUDs retain useful readable width"); checks++;
             }
+            require(PerformanceHudModule.fpsLabel(client).equals(Math.max(0, client.getFps()) + " FPS"), "Performance HUD reads actual client FPS"); checks++;
+            client.player = null; require(PerformanceHudModule.pingLabel(client).equals("Ping unavailable"), "No player never invents a latency"); checks++;
             LungeTestClient.LOG.info("SURVIVAL_MODULES_VERIFIED: {} checks; actual armor stacks/equipment, thresholds, transformed LightTexture brightness and unchanged gamma, paged navigation and module controls", checks);
         } catch (ReflectiveOperationException e) { throw new AssertionError(e); }
         finally {
-            ArmorAlertsModule.initialize(threshold); ArmorAlertsModule.setEnabled(armor); FullbrightModule.setEnabled(bright); SessionHudModule.setEnabled(session);
+            ArmorAlertsModule.initialize(threshold); ArmorAlertsModule.setEnabled(armor); FullbrightModule.setEnabled(bright); SessionHudModule.setEnabled(session); PerformanceHudModule.setEnabled(performance);
             if (LungeTestClient.hudEnabled() != hud) LungeTestClient.toggleHud();
             while (LungeTestClient.hudMode() != hudMode) LungeTestClient.cycleHudMode();
             while (LungeTestClient.hudCorner() != hudCorner) LungeTestClient.cycleHudCorner();

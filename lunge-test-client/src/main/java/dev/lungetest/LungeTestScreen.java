@@ -22,7 +22,7 @@ public final class LungeTestScreen extends AzeiumScreen {
     private AzeiumModules.Module captureModule;
     private CombatAssistModule.Feature captureActivation;
     private boolean captureMenu, captureRejoin, captureSpear;
-    private static final int MODULES_PER_PAGE = 7;
+    private static final int MODULES_PER_PAGE = 8;
     private int navPage;
     private Button spearKey, spearSlot, armorThreshold;
     private Button rejoinNow, rejoinKey;
@@ -139,7 +139,7 @@ public final class LungeTestScreen extends AzeiumScreen {
                 addButton(x, settings, w, 20, "Configure test scenario", b ->
                         minecraft.setScreen(new ClientSettingsScreen(this, ClientSettingsScreen.Page.TESTS)));
             }
-            case COORDINATES, FULLBRIGHT -> { }
+            case COORDINATES, FULLBRIGHT, PERFORMANCE_HUD -> { }
             case ARMOR_ALERTS -> armorThreshold = addButton(x, settings, w, 20,
                     "Warn at: " + ArmorAlertsModule.threshold() + "%", b -> { ArmorAlertsModule.cycleThreshold(); refreshButtons(); });
             case SESSION_HUD -> addButton(x, settings, w, 20, "Reset session stats", b -> {
@@ -405,7 +405,8 @@ public final class LungeTestScreen extends AzeiumScreen {
 
     @Override public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float delta) {
         if (minecraft.level == null) renderPanorama(g, delta);
-        g.fillGradient(0, 0, width, height, glass(ThemeManager.top(), .12F), glass(ThemeManager.bottom(), .23F));
+        g.fill(0, 0, width, height, 0x55050810);
+        g.fillGradient(0, 0, width, height, glass(ThemeManager.first(), .12F), glass(ThemeManager.second(), .08F));
     }
     @Override public void render(GuiGraphics g, int mouseX, int mouseY, float delta) {
         TEXT = ThemeManager.text(); MUTED = ThemeManager.muted(); ACCENT = ThemeManager.accent();
@@ -436,18 +437,18 @@ public final class LungeTestScreen extends AzeiumScreen {
         rounded(g, left + 10, top + 6, 30, 30, 6, fade(ThemeManager.alpha(ThemeManager.secondary(), 112), visibility));
         g.blit(ICON, left + 11, top + 7, left + 39, top + 35, 0, 1, 0, 1);
         g.pose().pushMatrix();
-        g.pose().translate(left + 48, top + 8);
-        g.pose().scale(1.4F, 1.4F);
-        UiTypography.draw(g, font, "azeium", 0, 0, TEXT, false);
+        g.pose().translate(left + 48, top + 4);
+        g.pose().scale(1.15F, 1.15F);
+        UiTypography.heading(g, font, "azeium", 0, 0, TEXT, 100);
         g.pose().popMatrix();
-        UiTypography.draw(g, font, "MODULE WORKSPACE", left + 48, top + 25, MUTED, false);
+        UiTypography.draw(g, font, "PERSONAL CLIENT", left + 48, top + 25, MUTED, false);
         long active = java.util.Arrays.stream(AzeiumModules.Module.values()).filter(AzeiumModules.Module::enabled).count();
         UiTypography.draw(g, font, "1.21.11", left + w - 58, top + 10, MUTED, false);
         UiTypography.draw(g, font, active + " / " + AzeiumModules.Module.values().length + " ON", left + w - 58, top + 25, MUTED, false);
         if (!compact()) UiTypography.draw(g, font, "MODULES  " + (navPage + 1) + " / " + ((AzeiumModules.Module.values().length + MODULES_PER_PAGE - 1) / MODULES_PER_PAGE), left + 14, top + 50, MUTED, false);
 
         int titleY = top + (compact() ? 47 : 53);
-        text(g, selected.label(), x, titleY, TEXT, contentWidth - 38);
+        UiTypography.heading(g, font, selected.label(), x, titleY - 5, TEXT, contentWidth - 40);
         String badge = selected.enabled() ? "ON" : "OFF";
         rounded(g, left + w - 47, titleY - 2, 33, 14, 7,
                 selected.enabled() ? glass(0x235C53, .8F) : glass(0x202A40, .7F));
@@ -523,6 +524,12 @@ public final class LungeTestScreen extends AzeiumScreen {
                 text(g, "Active time: " + SessionHudModule.timeLabel(), x, settings + 33, TEXT, contentWidth);
                 text(g, "Travel: " + SessionHudModule.distanceLabel(), x, settings + 54, ACCENT, contentWidth);
                 if (!compact()) text(g, "Pauses and teleports do not add travel.", x, settings + 80, MUTED, contentWidth);
+            }
+            case PERFORMANCE_HUD -> {
+                text(g, PerformanceHudModule.fpsLabel(minecraft), x, settings + 8, TEXT, contentWidth);
+                text(g, PerformanceHudModule.pingLabel(minecraft), x, settings + 31, ACCENT, contentWidth);
+                text(g, "Live FPS and reported server latency.", x, settings + 55, MUTED, contentWidth);
+                if (!compact()) text(g, "No background polling or packet spam.", x, settings + 80, MUTED, contentWidth);
             }
             case ZOOM -> {
                 text(g, "Bring distant details closer.", x, settings + 31, ACCENT, contentWidth);
@@ -601,8 +608,8 @@ public final class LungeTestScreen extends AzeiumScreen {
     @Override protected boolean capturingBind() { return capturingKeybind(); }
     @Override protected int windowWidth() { return panelWidth(); }
     @Override protected int windowHeight() { return panelHeight(); }
-    private int panelWidth() { return Math.min(540, Math.min(width - 16, Math.max(304, (int)(width * .82)))); }
-    private int panelHeight() { return Math.min(310, Math.min(height - 16, Math.max(224, (int)(height * .82)))); }
+    private int panelWidth() { return Math.min(580, Math.min(width - 16, Math.max(304, (int)(width * .82)))); }
+    private int panelHeight() { return Math.min(342, Math.min(height - 16, Math.max(224, (int)(height * .82)))); }
     private int sidebarWidth() { return panelWidth() >= 420 ? 148 : 106; }
     private int panelLeft() { return windowLeft(); }
     private int panelTop() { return windowTop(); }

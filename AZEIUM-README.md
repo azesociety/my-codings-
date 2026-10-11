@@ -1,6 +1,13 @@
-# Azeium 2.3.0
+# Azeium 2.4.0
 
-New in 2.3.0: Auto Mace always uses falling Smash and returns to the previous
+New in 2.4.0: a full shared visual refresh with licensed Allura cursive brand and
+module headings, readable Open Sans controls, satin pastel gradients, rounded
+surfaces, softer highlights and consistent styling across menus and settings.
+Fifteen modules fit across two pages. Performance HUD displays actual client FPS
+and server-reported player latency without sending extra requests. It starts OFF
+and has its own saved toggle bind. Client settings includes Disable all modules.
+
+Retained from 2.3.0: Auto Mace always uses falling Smash and returns to the previous
 hotbar slot after that hit. Its Reach control cycles Vanilla (default), then
 3–6 blocks in half-block steps. This changes local eligibility for an already
 selected entity; it does not expand crosshair picking or server permissions.
@@ -37,14 +44,16 @@ MIT licensed.
 
 ## Smooth movable menus and movement
 
-Azeium screens use bundled Open Sans typography with rounded gradient panels.
+Azeium screens use bundled Allura cursive display headings and Open Sans controls
+with rounded satin gradient panels.
 Drag an empty part of the header to move the panel; its controls move with it and
 remain inside the window after resizing. Position is retained while switching
 tabs in the same screen. Use your Minecraft movement keys to walk, jump, crouch
 and sprint while the menu is open. Typing in a colour field, keybind capture,
 focus loss and other Minecraft screens suppress menu movement. The menus do not
 pause a singleplayer world. Attacks and item use are not forwarded through the UI.
-Open Sans is distributed under Apache-2.0; its attribution and license are bundled.
+Open Sans is distributed under Apache-2.0; Allura under SIL OFL 1.1.
+Both fonts include their attribution and license in the source and mod JAR.
 
 ## Themes, client settings and combat tests
 
@@ -83,7 +92,7 @@ Logs are capped at 12,000 entries per session. Start a new session when needed.
 
 ## Startup compatibility
 
-Azeium 2.3.0 includes MixinExtras **0.5.5** inside its JAR and requires that version
+Azeium 2.4.0 includes MixinExtras **0.5.5** inside its JAR and requires that version
 or newer. This resolves the reproduced `ArrayList cannot be cast to AnnotationNode`
 exception in `FactoryRedirectWrapperMixinTransformer` when MixinExtras 0.5.4
 processes the newer Redirect annotation arrays used with Sponge Mixin 0.17.4.
@@ -98,7 +107,7 @@ validation covers the reproduced library failure and an isolated Fabric client.
 
 Remove previous Spear Controls, Lunge Test Controls, Spear Test Lab, Spear Sprint
 and combined test JARs, including previous Azeium versions. Put
-`azeium-2.3.0-mc1.21.11.jar` in your Minecraft
+`azeium-2.4.0-mc1.21.11.jar` in your Minecraft
 instance's `mods` folder alongside Fabric API. This is a client mod, not a Paper
 plugin. EntityCulling is not included or required.
 
@@ -108,7 +117,7 @@ then use its ON/OFF control. Selecting a module does not enable it.
 The translucent menu's **Opacity** control cycles through **55%, 70% and 85%**;
 the default is **70%**. Use **Menu key** to change the menu binding.
 
-Each of the fourteen modules has its own **Keybind** control. Click it, then press the
+Each of the fifteen modules has its own **Keybind** control. Click it, then press the
 keyboard key to assign. **Escape** cancels capture; **Delete** or **Backspace**
 clears a module binding. Duplicate Azeium module/menu keys are rejected. Module
 bindings start at **None**, fire once per key press, and only work while playing
@@ -231,6 +240,11 @@ It has an independent toggle and keybind, and hides with F1 or an open menu.
 it again to smoothly restore the view, or assign its own module key. Your normal
 FOV setting is retained. Zoom starts OFF and its magnification preference is saved.
 
+**Performance HUD** shows client FPS and reported server ping. Missing network
+data is shown as unavailable; singleplayer says Local world. The compact panel
+sits below Session HUD and avoids the travel/armor panels at tested GUI sizes.
+It sends no probe packets and does not alter networking or game tick speed.
+
 **AutoMace** always uses **Action: Smash**. With more than 1.5 blocks of real
 fall distance and downward movement, your entity attack click selects a hotbar
 mace before that same hit, then restores your previous slot. No second attack
@@ -272,7 +286,7 @@ disconnect or world replacement.
 The **Liquid Glass** menu uses rounded translucent panels, layered reflections,
 soft hover highlights, quick opening fades, rounded state badges and an animated
 selection rail. Equal glass rows share draw calls, and unchanged button labels
-are reused. Its fourteen module tabs span two pages and fit the minimum 320x240 GUI size.
+are reused. Its fifteen module tabs span two pages and fit the minimum 320x240 GUI size.
 
 ## Rejoin controls
 

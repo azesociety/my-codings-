@@ -1,11 +1,19 @@
-Azeium 2.3.0 — Minecraft Java 1.21.11
+Azeium 2.4.0 — Minecraft Java 1.21.11
 
 INSTALL
 Use Java 21, Fabric Loader 0.19.3+ and Fabric API for Minecraft 1.21.11.
-Remove old Azeium/spear-control JARs, then put azeium-2.3.0-mc1.21.11.jar in this profile's mods folder.
+Remove old Azeium/spear-control JARs, then put azeium-2.4.0-mc1.21.11.jar in this profile's mods folder.
 Press Right Shift (or your saved menu key).
 
-NEW CONTROLS
+NEW DESIGN AND CONTROLS
+The entire UI shares satin pastel gradients, rounded glass panels, smooth hover
+states, Allura cursive headings and readable Open Sans setting labels.
+Both fonts are licensed and bundled for offline use.
+Performance HUD shows actual FPS and server-reported ping without extra probes.
+It has an independent toggle and saved module keybind and starts OFF.
+Client settings includes Disable all modules. There are fifteen modules across
+two sidebar pages. Headers remain draggable and movement works while menus open.
+
 Auto Mace always uses Smash. Enable it; during a valid falling entity attack,
 it selects your hotbar mace for that hit, then returns to the previous slot.
 Cancelled attacks return too. Grounded/rising/short falls keep their held item.
@@ -29,7 +37,7 @@ is Download. It works offline and saves a ZIP with the JAR, source ZIP and READM
 If a viewer displays HTML code, save it as an .html file and open it in a browser.
 
 SOURCE
-Extract azeium-2.3.0-source.zip. Build with Java 21: ./gradlew build (Windows: gradlew.bat build).
+Extract azeium-2.4.0-source.zip. Build with Java 21: ./gradlew build (Windows: gradlew.bat build).
 First builds need Minecraft/Fabric dependencies. Read README.md for all modules.
 
 VALIDATION

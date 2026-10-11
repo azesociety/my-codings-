@@ -1,0 +1,4 @@
+Allura. Copyright 2010 The Allura Project Authors. SIL Open Font License 1.1.
+Source: https://github.com/google/fonts/tree/main/ofl/allura
+Font blob: dd197a26fb5d836bedb73aead3c6fc6f4c9ca864
+Use script.json for display headings; ui.json remains the readable control font.
