@@ -136,10 +136,10 @@ public final class ClientSettingsScreen extends AzeiumScreen {
                 CombatAssistModule.cycleMaceAction();
                 show(page);
             });
-            slider(x, 110, w, "Reaction delay (ticks)", 0, 200, () -> p.reactionTicks,
-                    n -> CombatAssistModule.setTiming(f, n, p.actionIntervalTicks));
-            slider(x, 134, w, "Action interval (ticks)", 2, 200, () -> p.actionIntervalTicks,
-                    n -> CombatAssistModule.setTiming(f, p.reactionTicks, n));
+            button(x, 110, w, CombatAssistModule.smashReachLabel(), ignored -> {
+                CombatAssistModule.cycleSmashReach(); show(page);
+            });
+            button(x, 134, w, "Return to previous slot: Always", ignored -> {}).active = false;
             button(x, 160, w, "Activation: " + CombatAssistModule.activation(f).label(), ignored -> {
                 CombatAssistModule.cycleActivation(f); show(page);
             });

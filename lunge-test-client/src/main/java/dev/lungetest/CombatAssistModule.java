@@ -53,6 +53,7 @@ public final class CombatAssistModule {
         public boolean fallingOnly;
         public MaceAction maceAction = MaceAction.FALLING_SMASH;
         public int maceRevision;
+        public double smashReach = 0;
         public int reactionTicks = 0, actionIntervalTicks = 2;
         public Preferences() { activationKey = GLFW.GLFW_KEY_UNKNOWN; }
         public Preferences(Feature feature) {
@@ -87,7 +88,9 @@ public final class CombatAssistModule {
             state.prefs = feature == Feature.STUNSLAM || prefs == null ? new Preferences(feature) : prefs;
             if (state.prefs.activation == null) state.prefs.activation = Activation.AUTOMATIC;
             if (state.prefs.targetMode == null) state.prefs.targetMode = TargetMode.CROSSHAIR;
-            if (state.prefs.maceAction == null) state.prefs.maceAction = MaceAction.FALLING_SMASH;
+            state.prefs.maceAction = MaceAction.FALLING_SMASH;
+            if (!Double.isFinite(state.prefs.smashReach) || state.prefs.smashReach < 3) state.prefs.smashReach = 0;
+            state.prefs.smashReach = Math.min(6, state.prefs.smashReach);
             if (feature == Feature.MACE && state.prefs.maceRevision < 1) {
                 if (state.prefs.maceAction == MaceAction.SWAP_ONLY) state.prefs.maceAction = MaceAction.FALLING_SMASH;
                 state.prefs.maceRevision = 1;
@@ -131,10 +134,17 @@ public final class CombatAssistModule {
     public static void cycleMaceAction() {
         State state = STATES.get(Feature.MACE);
         cancel(Minecraft.getInstance(), state);
-        state.prefs.maceAction = MaceAction.values()[(maceAction().ordinal() + 1) % MaceAction.values().length];
+        state.prefs.maceAction = MaceAction.FALLING_SMASH;
         state.status = state.enabled ? idleStatus(Feature.MACE) : "Disabled";
         save();
     }
+    public static double smashReach() { return STATES.get(Feature.MACE).prefs.smashReach; }
+    public static void cycleSmashReach() {
+        var prefs = STATES.get(Feature.MACE).prefs;
+        prefs.smashReach = prefs.smashReach == 0 ? 3 : prefs.smashReach >= 6 ? 0 : prefs.smashReach + .5;
+        save();
+    }
+    public static String smashReachLabel() { return smashReach() == 0 ? "Reach: Vanilla" : "Reach: " + smashReach() + " blocks"; }
     public static String maceModeLabel() {
         return STATES.get(Feature.MACE).prefs.fallingOnly ? "Falling smash" : "Normal + smash";
     }
@@ -437,7 +447,7 @@ public final class CombatAssistModule {
         int previous = player.getInventory().getSelectedSlot();
         // Test vanilla reach with the actual mace rather than the spear's minimum range.
         player.getInventory().setSelectedSlot(slot);
-        if (!visibleInReach(player, target) || player.getCooldowns().isOnCooldown(player.getMainHandItem())
+        if (!smashInReach(player, target) || player.getCooldowns().isOnCooldown(player.getMainHandItem())
                 || player.cannotAttackWithItem(player.getMainHandItem(), 0)) {
             player.getInventory().setSelectedSlot(previous);
             state.status = "Waiting for mace reach and item cooldown";
@@ -446,6 +456,8 @@ public final class CombatAssistModule {
         // A falling smash takes this new click; don't leave an older axe combo queued behind it.
         player.getInventory().setSelectedSlot(previous);
         cancel(client, STATES.get(Feature.STUNSLAM));
+        if (state.ownedSlot < 0) state.originalSlot = previous;
+        state.ownedSlot = slot;
         player.getInventory().setSelectedSlot(slot);
         state.connection = client.getConnection();
         state.level = client.level;
@@ -476,6 +488,7 @@ public final class CombatAssistModule {
                 state.status = "Mace hit sent";
                 CombatTestLog.event("AutoMace", "manual_mace_attack", "target=" + target.getUUID());
             }
+            finishManualAttack(client);
             return;
         }
         if (state.prefs.maceAction == MaceAction.SWAP_ONLY) {
@@ -498,6 +511,28 @@ public final class CombatAssistModule {
             select(client, state, maceSlot(client.player));
             state.status = "Mace selected: waiting for normal charge";
         } else state.status = "Waiting for configured reaction delay";
+    }
+    /** Restore only our temporary selection; never overwrite a user's subsequent scroll. */
+    public static void finishManualAttack(Minecraft client) {
+        State state = STATES.get(Feature.MACE);
+        boolean owned = state.ownedSlot >= 0 && client.player != null
+                && state.connection == client.getConnection() && state.level == client.level
+                && client.player.getInventory().getSelectedSlot() == state.ownedSlot;
+        releaseSlot(client, state);
+        if (owned && client.gameMode != null) ((HotbarSyncAccess) client.gameMode).azeium$syncCarriedItem();
+    }
+    private static boolean smashInReach(LocalPlayer player, Entity target) {
+        double range = smashReach();
+        if (range == 0) return visibleInReach(player, target);
+        Vec3 eyes = player.getEyePosition();
+        var box = target.getBoundingBox();
+        Vec3 aim = new Vec3(Math.clamp(eyes.x, box.minX, box.maxX),
+                Math.clamp(eyes.y, box.minY, box.maxY), Math.clamp(eyes.z, box.minZ, box.maxZ));
+        if (eyes.distanceToSqr(aim) > range * range || !player.hasLineOfSight(target)) return false;
+        var obstruction = player.level().clip(new ClipContext(eyes, aim,
+                ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, player));
+        return obstruction.getType() == HitResult.Type.MISS
+                || obstruction.getLocation().distanceToSqr(eyes) + 1.0e-5 >= aim.distanceToSqr(eyes);
     }
     private static boolean canSwap(Minecraft client, State state, Entity target) {
         if (!state.enabled || state.prefs.activation == Activation.HOLD && !state.held

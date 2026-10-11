@@ -5,6 +5,7 @@
   "client": [
     "PlayerCooldownMixin",
     "KeyboardMenuMixin",
+    "MouseSpearMixin",
     "ManualAttackMixin",
     "CombatAttackMixin",
     "PositionSyncMixin",

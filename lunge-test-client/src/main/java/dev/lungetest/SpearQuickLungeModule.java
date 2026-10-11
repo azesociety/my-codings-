@@ -25,16 +25,18 @@ public final class SpearQuickLungeModule {
         status = key == GLFW.GLFW_KEY_UNKNOWN ? "Assign a quick-lunge key" : "Press " + keyLabel() + ": spear jab + return";
     }
     public static int key() { return key; }
+    public static int mouseCode(int button) { return -100 - button; }
+    private static boolean mouseKey(int code) { return code <= -100 && code >= -100 - GLFW.GLFW_MOUSE_BUTTON_LAST; }
     public static String keyLabel() { return key == GLFW.GLFW_KEY_UNKNOWN ? "None"
-            : InputConstants.getKey(new KeyEvent(key, 0, 0)).getDisplayName().getString(); }
+            : mouseKey(key) ? "Mouse " + (-key - 99) : InputConstants.getKey(new KeyEvent(key, 0, 0)).getDisplayName().getString(); }
     public static int preferredSlot() { return preferredSlot; }
     public static String slotLabel() { return preferredSlot < 0 ? "Auto" : Integer.toString(preferredSlot + 1); }
     public static void cycleSlot() { preferredSlot = preferredSlot == 8 ? -1 : preferredSlot + 1; LungeTestClient.saveSpearPreferences(); }
     public static boolean dispatching() { return dispatching; }
     public static String status() { return key == GLFW.GLFW_KEY_UNKNOWN ? "Assign a quick-lunge key"
-            : !LungeTestClient.enabled() ? "Enable Spear to use quick lunge" : status; }
+            : status; }
     private static boolean available(int code) {
-        if (code == GLFW.GLFW_KEY_UNKNOWN) return true;
+        if (code == GLFW.GLFW_KEY_UNKNOWN || mouseKey(code)) return true;
         if (!AzeiumKeybinds.validKey(code) || code == AzeiumKeybinds.menuKey() || code == AutoRejoinModule.key()
                 || CombatAssistModule.isActivationKeyAssigned(code)) return false;
         for (var module : AzeiumModules.Module.values()) if (AzeiumKeybinds.key(module) == code) return false;
@@ -53,8 +55,13 @@ public final class SpearQuickLungeModule {
         }
         return ready(client) && (action == GLFW.GLFW_PRESS || action == GLFW.GLFW_REPEAT);
     }
+    public static boolean handleMouse(Minecraft client, int action, int button) {
+        if (!mouseKey(key) || mouseCode(button) != key || client.screen != null || !ready(client)) return false;
+        if (action == GLFW.GLFW_PRESS) handleKey(client, action, new KeyEvent(key, 0, 0));
+        return true;
+    }
     private static boolean ready(Minecraft client) {
-        return LungeTestClient.active(client) && client.player.isAlive() && client.level != null && client.gameMode != null
+        return client.player != null && client.getConnection() != null && client.player.isAlive() && client.level != null && client.gameMode != null
                 && client.screen == null && client.isWindowActive() && !client.isPaused() && !client.player.isSpectator()
                 && !client.player.isUsingItem() && !client.player.isHandsBusy();
     }

@@ -25,6 +25,7 @@ public abstract class ManualAttackMixin implements SpearAttackAccess {
 
     @Inject(method = "startAttack", at = @At("RETURN"))
     private void lungeTest$recordManualAttack(CallbackInfoReturnable<Boolean> info) {
+        CombatAssistModule.finishManualAttack((Minecraft) (Object) this);
         LungeTestClient.recordManualAttack((Minecraft) (Object) this, info.getReturnValue());
     }
 }

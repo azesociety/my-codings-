@@ -154,13 +154,8 @@ public final class CombatAssistVerification {
             verifySwapPreferences();
             setMaceAction(CombatAssistModule.MaceAction.FALLING_SMASH);
             verifyFallingSmash(client, player, level, zombie, connection);
-            setMaceAction(CombatAssistModule.MaceAction.SWAP_ONLY);
-            verifySwapOnly(client, player, level, zombie, connection, unsafe);
-            setMaceAction(CombatAssistModule.MaceAction.CHARGED_FOLLOW_UP);
-            verifyConfiguredTiming(client, player, zombie, connection);
-            verifyMace(client, player, level, zombie, connection, unsafe);
             verifyAxeCombo(client, player, level, zombie, connection);
-            LungeTestClient.LOG.info("COMBAT_ASSIST_VERIFIED: {} checks; immediate any-entity/any-held-item/empty-hand mace selection after real manual attacks, ordinary next-tick selection sync, no swap-only generated attacks, preference migration, optional charged hostile follow-up and fixed automatic axe-to-mace combos, hold/release, session/focus guards and shared action budget; no network transport", checks);
+            LungeTestClient.LOG.info("COMBAT_ASSIST_VERIFIED: {} checks; same-click falling Smash, original-slot restoration, preference migration and fixed axe-to-mace combos, hold/release, session/focus guards and shared action budget; no network transport", checks);
         } catch (ReflectiveOperationException e) {
             throw new AssertionError("Could not prepare real vanilla combat-assist fixture", e);
         } finally {
@@ -211,13 +206,13 @@ public final class CombatAssistVerification {
                     "The prior release's swap-only configuration migrates to the requested falling hit behavior");
             var explicitSwap = gson.fromJson("{\"maceAction\":\"SWAP_ONLY\",\"maceRevision\":1}", CombatAssistModule.Preferences.class);
             CombatAssistModule.initialize(Map.of(MACE.name(), explicitSwap));
-            require(CombatAssistModule.maceAction() == CombatAssistModule.MaceAction.SWAP_ONLY,
-                    "A newly chosen swap-only preference remains selected after restart");
+            require(CombatAssistModule.maceAction() == CombatAssistModule.MaceAction.FALLING_SMASH,
+                    "Saved swap-only preferences always migrate to Smash");
             var followUp = gson.fromJson("{\"maceAction\":\"CHARGED_FOLLOW_UP\"}",
                     CombatAssistModule.Preferences.class);
             CombatAssistModule.initialize(Map.of(MACE.name(), followUp));
-            require(CombatAssistModule.maceAction() == CombatAssistModule.MaceAction.CHARGED_FOLLOW_UP,
-                    "An explicitly saved charged-follow-up action is preserved");
+            require(CombatAssistModule.maceAction() == CombatAssistModule.MaceAction.FALLING_SMASH,
+                    "Saved follow-up preferences always migrate to Smash");
         } finally {
             CombatAssistModule.initialize(original);
         }
@@ -250,8 +245,8 @@ public final class CombatAssistVerification {
                 require(hasSlotBeforeAttack(connection, 3, 1),
                         "Vanilla sends the selected mace slot before the same-click falling attack");
                 tick(client, player, 8);
-                require(attacks(connection) == 1 && player.inventory.getSelectedSlot() == 3,
-                        "Falling smash has no delayed second attack or slot snap-back");
+                require(attacks(connection) == 1 && player.inventory.getSelectedSlot() == 0,
+                        "Falling smash restores the original slot without a delayed second attack");
                 require(player.fallDistance == 2.5 && player.velocity.equals(new Vec3(0, -.5, 0)),
                         "Preparing a falling mace does not rewrite fall distance or velocity");
             }
@@ -293,6 +288,29 @@ public final class CombatAssistVerification {
                 client.screen = null;
                 set(Minecraft.class, client, "windowActive", true);
             }
+            restart(client, player, connection, MACE);
+            missTime.setInt(client, 5);
+            startAttack.invoke(client);
+            require(attacks(connection) == 0 && player.inventory.getSelectedSlot() == 0,
+                    "A blocked vanilla click restores the temporary mace without attacking");
+            missTime.setInt(client, 0);
+            restart(client, player, connection, MACE);
+            locate(zombie, new Vec3(.5, 3, 5.8));
+            require(!CombatAssistModule.prepareManualAttack(client, zombie), "Vanilla mace reach excludes distant spear targets");
+            while (CombatAssistModule.smashReach() != 6) CombatAssistModule.cycleSmashReach();
+            require(CombatAssistModule.prepareManualAttack(client, zombie) && player.inventory.getSelectedSlot() == 3,
+                    "Six-block setting allows a visible crosshair target within six blocks");
+            CombatAssistModule.finishManualAttack(client);
+            require(player.inventory.getSelectedSlot() == 0, "Extended-reach preparation also returns to original slot");
+            locate(zombie, new Vec3(.5, 3, 7.5));
+            require(!CombatAssistModule.prepareManualAttack(client, zombie), "Six-block setting rejects farther targets");
+            CombatAssistModule.cycleSmashReach();
+            locate(zombie, new Vec3(.5, 3, 2.5));
+            restart(client, player, connection, MACE);
+            require(CombatAssistModule.prepareManualAttack(client, zombie), "Ownership fixture prepares mace");
+            player.inventory.setSelectedSlot(5);
+            CombatAssistModule.finishManualAttack(client);
+            require(player.inventory.getSelectedSlot() == 5, "Restore preserves a subsequent user slot change");
             restart(client, player, connection, MACE);
             CombatAssistModule.setEnabled(MACE, false);
             require(!CombatAssistModule.prepareManualAttack(client, zombie) && attacks(connection) == 0,

@@ -174,7 +174,7 @@ public final class LungeTestScreen extends AzeiumScreen {
             CombatAssistModule.cycleActivation(feature); refreshButtons();
         });
         combatActivation.setTooltip(hint(feature == CombatAssistModule.Feature.MACE
-                ? "Automatic responds to your manual hit without another key. Swap only accepts any entity; Charged follow-up targets the hostile mob you hit. Hold key requires the use key during the hit and any follow-up."
+                ? "Automatic prepares your falling manual hit. Hold key requires the use key during that hit. Your previous hotbar slot is restored."
                 : "Automatic starts the combo when you manually attack a hostile mob, without a use key. Hold requires the use key during your attack and follow-up. The module key above enables or disables the module."));
         combatTarget = addButton(x + half + 6, y, w - half - 6, 18, combatTargetLabel(), b -> {
             if (feature == CombatAssistModule.Feature.MACE) CombatAssistModule.cycleMaceAction();
@@ -182,10 +182,10 @@ public final class LungeTestScreen extends AzeiumScreen {
             refreshButtons();
         });
         combatTarget.setTooltip(hint(feature == CombatAssistModule.Feature.MACE
-                ? "Falling smash selects your mace before the same manual hit during a real fall. Swap only selects your hotbar mace immediately after you hit any entity with any held item or empty hand. It leaves the mace selected and sends no extra attacks. Charged follow-up optionally adds one normally charged attack on the hostile mob you hit."
+                ? "Smash is always selected. A valid falling click uses your hotbar mace for that hit, then returns to the original slot."
                 : "Crosshair follows up on the hostile mob you manually hit. Nearest hostile chooses the closest visible hostile mob within normal attack reach when the combo starts. The combo stays on that target."));
         combatBehavior = addButton(x, y + 21, w, 18, combatBehaviorLabel(), b -> {
-            if (feature == CombatAssistModule.Feature.MACE) CombatAssistModule.cycleMaceMode();
+            if (feature == CombatAssistModule.Feature.MACE) CombatAssistModule.cycleSmashReach();
             refreshButtons();
         });
         combatKey = addButton(x, y + 42, w, 18, combatKeyLabel(), b -> beginActivationCapture(feature));
@@ -216,14 +216,14 @@ public final class LungeTestScreen extends AzeiumScreen {
     private boolean autoTellyMode() { return AutoClutchModule.mode() == AutoClutchModule.Mode.AUTO_TELLY; }
     private String clutchSpeedLabel() { return "Speed: " + AutoClutchModule.tellySpeed().label(); }
     private String combatBehaviorLabel() {
-        if (fallingSmash()) return "Hit timing: During descent";
+        if (fallingSmash()) return CombatAssistModule.smashReachLabel();
         return combatFeature() == CombatAssistModule.Feature.MACE
                 ? "Attacks: " + CombatAssistModule.maceModeLabel()
                 : "Combo: Axe + mace";
     }
     private String combatBehaviorHint() {
         if (combatFeature() == CombatAssistModule.Feature.MACE)
-            return fallingSmash() ? "While descending far enough for a vanilla mace smash, your click switches to a hotbar mace before that same hit. No second click or queued follow-up. Keep an enchanted mace for Wind Burst; the server decides its effect."
+            return fallingSmash() ? "While descending far enough for a vanilla mace smash, your click switches to a hotbar mace before that same hit. Your previous slot is restored after the hit. Click to select vanilla reach or 3–6 blocks. The server decides whether extended hits are accepted."
                     : swapOnly()
                     ? "Swap only keeps all attacks manual. This charge preference applies only if you choose Charged follow-up. Any entity hit can select your mace; your original hit still uses the item you held."
                     : "After your manual hit, switch to a hotbar mace. A hostile mob can receive one fully charged follow-up. Falling smash requires a real fall; Normal + smash also allows grounded hits. Your previous slot is restored afterward.";
@@ -306,10 +306,10 @@ public final class LungeTestScreen extends AzeiumScreen {
         if (range != null) label(range, rangeLabel());
         if (clutchSpeed != null) label(clutchSpeed, clutchSpeedLabel());
         if (combatActivation != null) label(combatActivation, combatActivationLabel());
-        if (combatTarget != null) label(combatTarget, combatTargetLabel());
+        if (combatTarget != null) { label(combatTarget, combatTargetLabel()); combatTarget.active = false; }
         if (combatBehavior != null) {
             label(combatBehavior, combatBehaviorLabel());
-            combatBehavior.active = CombatAssistModule.maceAction() == CombatAssistModule.MaceAction.CHARGED_FOLLOW_UP;
+            combatBehavior.active = true;
             String behaviorHint = combatBehaviorHint();
             if (!behaviorHint.equals(lastCombatBehaviorHint)) {
                 combatBehavior.setTooltip(hint(behaviorHint));
@@ -347,7 +347,7 @@ public final class LungeTestScreen extends AzeiumScreen {
         int last = (AzeiumModules.Module.values().length - 1) / MODULES_PER_PAGE;
         selectModule(AzeiumModules.Module.values()[Math.clamp(page, 0, last) * MODULES_PER_PAGE]);
     }
-    private String spearKeyLabel() { return captureSpear ? "Press a lunge key..." : "Quick-lunge key: " + SpearQuickLungeModule.keyLabel(); }
+    private String spearKeyLabel() { return captureSpear ? "Press key / mouse button..." : "Quick-lunge key: " + SpearQuickLungeModule.keyLabel(); }
     private String rejoinKeyLabel() { return captureRejoin ? "Press a rejoin key..." : "Rejoin key: " + AutoRejoinModule.keyLabel(); }
     private void cancelCapture() { captureModule = null; captureMenu = false; captureRejoin = false; captureSpear = false; captureActivation = null; }
 
@@ -385,6 +385,14 @@ public final class LungeTestScreen extends AzeiumScreen {
             if (accepted) { cancelCapture(); showNotice("Keybind saved", false); }
             else showNotice("That key is already assigned", true);
         }
+        refreshButtons();
+        return true;
+    }
+    public boolean handleCapturedMouse(int button) {
+        if (!captureSpear) return false;
+        if (SpearQuickLungeModule.bindKey(SpearQuickLungeModule.mouseCode(button))) {
+            cancelCapture(); showNotice("Mouse bind saved", false);
+        } else showNotice("Unsupported mouse button", true);
         refreshButtons();
         return true;
     }

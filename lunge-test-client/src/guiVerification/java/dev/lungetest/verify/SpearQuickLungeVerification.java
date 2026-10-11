@@ -82,8 +82,11 @@ public final class SpearQuickLungeVerification {
             // Mouse recapture intentionally sets missTime=10000. A normal gameplay tick
             // clears it through continueAttack(false); this fixture does not run that tick.
             field(Minecraft.class, "missTime").setInt(client, 0);
+            field(net.minecraft.world.entity.LivingEntity.class, "attackStrengthTicker").setInt(player, 200);
             key(client, GLFW.GLFW_KEY_F18, GLFW.GLFW_PRESS); SpearQuickLungeModule.tick(client);
-            require(connection.packets.isEmpty(), "Spear OFF cannot generate quick attacks");
+            require(stabs(connection) == 1 && player.inventory.getSelectedSlot() == 0,
+                    "Spear shortcut works with module OFF and restores the original slot");
+            connection.packets.clear(); player.lunges = 0;
             LungeTestClient.toggle(client);
             key(client, GLFW.GLFW_KEY_F18, GLFW.GLFW_PRESS);
             require(connection.packets.isEmpty(), "Input queues action without preemptive packets");
@@ -138,6 +141,27 @@ public final class SpearQuickLungeVerification {
             player.inventory.setItem(5, new ItemStack(Items.IRON_SPEAR));
             key(client, GLFW.GLFW_KEY_F18, GLFW.GLFW_PRESS); SpearQuickLungeModule.tick(client);
             require(stabs(connection) == before + 1 && player.inventory.getSelectedSlot() == 0, "Configured hotbar slot jabs and restores");
+            client.setScreen(new LungeTestScreen());
+            var mouseMenu = (LungeTestScreen) client.screen;
+            button(mouseMenu, "Quick-lunge key: ").onPress(new KeyEvent(GLFW.GLFW_KEY_ENTER, 0, 0));
+            var mouseButton = new net.minecraft.client.input.MouseButtonInfo(4, 0);
+            var mouseHandler = client.mouseHandler.getClass().getDeclaredMethod("onButton", long.class,
+                    net.minecraft.client.input.MouseButtonInfo.class, int.class);
+            mouseHandler.setAccessible(true);
+            mouseHandler.invoke(client.mouseHandler, client.getWindow().handle(), mouseButton, GLFW.GLFW_PRESS);
+            require(!mouseMenu.capturingKeybind() && SpearQuickLungeModule.key() == SpearQuickLungeModule.mouseCode(4),
+                    "Actual mouse hook captures a side-button bind");
+            SpearQuickLungeModule.initialize(SpearQuickLungeModule.key(), -1);
+            require(SpearQuickLungeModule.keyLabel().equals("Mouse 5"), "Saved mouse bind survives initialization");
+            client.setScreen(null); field(Minecraft.class, "missTime").setInt(client, 0);
+            long mouseBefore = stabs(connection);
+            mouseHandler.invoke(client.mouseHandler, client.getWindow().handle(), mouseButton, GLFW.GLFW_PRESS);
+            SpearQuickLungeModule.tick(client);
+            mouseHandler.invoke(client.mouseHandler, client.getWindow().handle(), mouseButton, GLFW.GLFW_RELEASE);
+            SpearQuickLungeModule.tick(client);
+            require(stabs(connection) == mouseBefore + 1 && player.inventory.getSelectedSlot() == 0,
+                    "Mouse press jabs once and returns; release does not attack");
+            require(!SpearQuickLungeModule.bindKey(SpearQuickLungeModule.mouseCode(8)), "Unsupported mouse buttons are rejected");
             require(!SpearQuickLungeModule.bindKey(AzeiumKeybinds.menuKey()), "Action key rejects existing menu bind");
             client.setScreen(new LungeTestScreen()); var clearMenu = (LungeTestScreen) client.screen;
             button(clearMenu, "Quick-lunge key: ").onPress(new KeyEvent(GLFW.GLFW_KEY_ENTER, 0, 0)); key(client, GLFW.GLFW_KEY_DELETE, GLFW.GLFW_PRESS);

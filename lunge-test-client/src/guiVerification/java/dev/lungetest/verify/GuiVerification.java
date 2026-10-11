@@ -216,7 +216,7 @@ public final class GuiVerification implements ClientModInitializer {
             RejoinVerification.verify(client);
             ((LungeTestScreen) client.screen).selectModule(AzeiumModules.Module.PLAYER_HIGHLIGHTS);
             installHudRenderingVerification((LungeTestScreen) client.screen);
-            LungeTestClient.LOG.info("GUI_VERIFIED: {} runtime checks passed, including all fourteen modules on two sidebar pages, Auto Mace falling/swap/follow-up controls, fixed automatic StunSlam, manual Rejoin key capture, independent colors/ranges, six clutch modes including automatic Telly and three Telly speed presets, keybinds, opacity, export and minimum-size layout without overlaps", checks);
+            LungeTestClient.LOG.info("GUI_VERIFIED: {} runtime checks passed, including all fourteen modules on two sidebar pages, Auto Mace fixed Smash and bounded reach controls, fixed automatic StunSlam, manual Rejoin key capture, independent colors/ranges, six clutch modes including automatic Telly and three Telly speed presets, keybinds, opacity, export and minimum-size layout without overlaps", checks);
         });
     }
     private void installHudRenderingVerification(LungeTestScreen screen) {
@@ -618,32 +618,14 @@ public final class GuiVerification implements ClientModInitializer {
             require(CombatAssistModule.activation(feature) == originalActivation,
                     "The activation control preserves an explicit saved preference after a complete cycle");
             if (feature == CombatAssistModule.Feature.MACE) {
-                var originalAction = CombatAssistModule.maceAction();
-                for (var ignored : CombatAssistModule.MaceAction.values()) {
-                    var before = CombatAssistModule.maceAction();
-                    button(screen, maceActionButton()).onPress(key);
-                    require(CombatAssistModule.maceAction() != before,
-                            "Auto Mace action control distinguishes immediate selection from a charged follow-up");
+                require(!button(screen, "Action: Smash").active, "Auto Mace always uses Smash");
+                double initialReach = CombatAssistModule.smashReach();
+                for (int i = 0; i < 8; i++) {
+                    button(screen, CombatAssistModule.smashReachLabel()).onPress(key);
+                    require(CombatAssistModule.smashReach() >= 0 && CombatAssistModule.smashReach() <= 6,
+                            "Reach control is capped at six blocks");
                 }
-                require(CombatAssistModule.maceAction() == originalAction,
-                        "A full Auto Mace action cycle restores its explicit preference");
-                while (CombatAssistModule.maceAction() != CombatAssistModule.MaceAction.SWAP_ONLY)
-                    button(screen, maceActionButton()).onPress(key);
-                require(!button(screen, "Attacks: " + CombatAssistModule.maceModeLabel()).active,
-                        "Swap-only disables its irrelevant follow-up attack preference");
-                require(buttons(screen).stream().noneMatch(button -> button.getMessage().getString().startsWith("Aim: ")),
-                        "Auto Mace action selection has no misleading hostile-target filter for any-entity swapping");
-                button(screen, maceActionButton()).onPress(key);
-                require(button(screen, "Attacks: " + CombatAssistModule.maceModeLabel()).active,
-                        "Choosing charged follow-up enables its normal/falling attack control");
-                String initialMode = CombatAssistModule.maceModeLabel();
-                button(screen, "Attacks: " + initialMode).onPress(key);
-                require(!CombatAssistModule.maceModeLabel().equals(initialMode),
-                        "Auto Mace has distinct falling-only and normal-attack behaviors");
-                button(screen, "Attacks: " + CombatAssistModule.maceModeLabel()).onPress(key);
-                require(CombatAssistModule.maceModeLabel().equals(initialMode),
-                        "A full Auto Mace behavior cycle restores its preference");
-                while (CombatAssistModule.maceAction() != originalAction) button(screen, maceActionButton()).onPress(key);
+                require(CombatAssistModule.smashReach() == initialReach, "Reach cycle returns to saved value");
             }
             int originalUseKey = CombatAssistModule.activationKey(feature);
             button(screen, "Use key: " + CombatAssistModule.activationKeyLabel(feature)).onPress(key);

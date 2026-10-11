@@ -1,15 +1,18 @@
-# Azeium 2.2.0
+# Azeium 2.3.0
 
-New in 2.2.0: a separate saved **Quick-lunge key** in Spear, plus Armor Alerts,
-Fullbright and Session HUD. The sidebar has two pages with seven modules per page
-so all fourteen modules remain readable at small GUI sizes. Existing manual spear
-clicks, lunge physics and the other gameplay modules keep their behavior.
+New in 2.3.0: Auto Mace always uses falling Smash and returns to the previous
+hotbar slot after that hit. Its Reach control cycles Vanilla (default), then
+3–6 blocks in half-block steps. This changes local eligibility for an already
+selected entity; it does not expand crosshair picking or server permissions.
+A spear-selected distant target may still be rejected by the server after switching
+to a mace. There is no promise of extra damage or anticheat acceptance.
 
-To use the spear shortcut, enable Spear, assign its Quick-lunge key and keep a
+To use the spear shortcut, assign its Quick-lunge key or mouse button and keep a
 spear in your hotbar. One press selects that spear, runs one ordinary jab and
 returns to your previously selected slot. Holding the key does not repeat attacks.
 Spear's regular Keybind still toggles the module. The Quick-lunge key is a separate
-action bind. Spear slot offers Auto (held spear first, then first hotbar spear) or
+action bind and works even with Spear OFF; normal vanilla cooldowns still apply then.
+Spear slot offers Auto (held spear first, then first hotbar spear) or
 an explicit slot 1–9. An explicit missing spear does not fall back to another slot.
 No inventory moving, enchantment adding, velocity edits or fabricated lunges occur.
 Actual forward lunges require a Lunge enchanted spear and vanilla conditions,
@@ -65,8 +68,7 @@ break or server detection result is guaranteed. Opening a menu, losing focus,
 manual slot changes, death or disconnect stop an armed trial. Other combat/bridge
 modules must be disabled to avoid overlapping trial actions.
 
-Auto Mace charged follow-up tests expose reaction delay (0–200 ticks) and weapon stage interval
-(2–200 ticks) for its optional charged follow-up. Swap only still switches immediately.
+Auto Mace exposes Smash, Reach and activation controls. Smash has no queued extra hit.
 Stun Slam has no timing or strategy settings: enable it and click a hostile mob.
 It automatically attacks with a hotbar axe, then a hotbar mace, using normal charge.
 Legacy Stun Slam preferences are ignored when loading existing configurations.
@@ -81,7 +83,7 @@ Logs are capped at 12,000 entries per session. Start a new session when needed.
 
 ## Startup compatibility
 
-Azeium 2.2.0 includes MixinExtras **0.5.5** inside its JAR and requires that version
+Azeium 2.3.0 includes MixinExtras **0.5.5** inside its JAR and requires that version
 or newer. This resolves the reproduced `ArrayList cannot be cast to AnnotationNode`
 exception in `FactoryRedirectWrapperMixinTransformer` when MixinExtras 0.5.4
 processes the newer Redirect annotation arrays used with Sponge Mixin 0.17.4.
@@ -96,7 +98,7 @@ validation covers the reproduced library failure and an isolated Fabric client.
 
 Remove previous Spear Controls, Lunge Test Controls, Spear Test Lab, Spear Sprint
 and combined test JARs, including previous Azeium versions. Put
-`azeium-2.2.0-mc1.21.11.jar` in your Minecraft
+`azeium-2.3.0-mc1.21.11.jar` in your Minecraft
 instance's `mods` folder alongside Fabric API. This is a client mod, not a Paper
 plugin. EntityCulling is not included or required.
 
@@ -229,33 +231,18 @@ It has an independent toggle and keybind, and hides with F1 or an open menu.
 it again to smoothly restore the view, or assign its own module key. Your normal
 FOV setting is retained. Zoom starts OFF and its magnification preference is saved.
 
-**AutoMace** defaults to **Action: Smash** (Falling smash). With more than 1.5
-blocks of real downward fall distance, your entity attack click selects a hotbar
-mace before that same hit. Holding wind charges, a spear, axe, sword, another item
-or an empty hand works. There is no second click or extra attack recharge delay.
-Normal mace reach, line of sight and item cooldowns apply. Grounded, rising and
-short-fall clicks retain the held item. Wind Burst requires an enchanted mace and
-a successful server-handled smash; this mod does not grant enchantments or lift.
-The mace stays selected until you scroll. This falling click takes priority over
-Stun Slam when both modules are enabled. Old Swap only preferences migrate once
-to this behavior; newly chosen alternate modes save normally.
+**AutoMace** always uses **Action: Smash**. With more than 1.5 blocks of real
+fall distance and downward movement, your entity attack click selects a hotbar
+mace before that same hit, then restores your previous slot. No second attack
+or extra recharge delay is added. Grounded, rising and short-fall clicks retain
+the held item. Wind Burst requires an enchanted mace and a successful server hit.
+Your own intervening slot change is preserved. A cancelled vanilla attack also
+releases the temporary selection. Old alternate action preferences migrate to Smash.
 
-The optional **Action: Swap only** retains the previous behavior. Enable it, keep a mace in your
-hotbar, and manually hit any entity with any held item or your empty hand. The
-original attack uses the item you held; immediately afterward, AutoMace selects
-your hotbar mace and leaves it selected. Players, passive animals, hostile mobs
-and other attackable entities can all trigger the swap. This action does not
-click for you or send a second attack; you control the next click. A missing
-hotbar mace leaves your selection unchanged, and clicking air does not swap.
-
-The optional **Action: Follow-up** selects the mace after your manual hit on a
-hostile mob, then can add one normally charged mace attack. It keeps that exact
-target; players, pets, passive animals and allied
-entities never receive an automatic follow-up. Its **Attacks** control offers
-**Normal + smash** (regular or falling attacks) or **Falling smash** (a real fall
-meeting vanilla's smash condition). The control is disabled in Swap only, where
-all mace attacks remain manual. The previous slot can be restored after a
-completed or cancelled charged follow-up.
+**Reach** cycles Vanilla (default), 3, 3.5, 4, 4.5, 5, 5.5, 6 blocks and back to
+Vanilla. Visibility and item cooldowns remain checked. Extended reach applies only
+to an entity already selected by the crosshair: it does not extend crosshair picking.
+The server may reject a distant mace hit even when a spear could reach that entity.
 
 **Auto StunSlam** turns a manual attack on a hostile mob into an **Axe + mace**
 combo. It selects a hotbar axe, waits for its normal charge and attacks, then
@@ -270,15 +257,14 @@ key, target selection, timing sliders or mode choices. Its module toggle and opt
 ON/OFF keybind remain available. A new manual click starts each combo.
 
 AutoMace defaults to **Automatic** activation. Its optional **Hold key** mode
-requires its **Use key** (default **R**) during the hit and follow-up.
+requires its **Use key** (default **R**) during the falling hit.
 
 Automatic combat follow-ups target hostile mobs, excluding players, pets, passive animals
 and allied entities. They require normal item charge, attack reach and line of
 sight. They pause for menus, lost focus, item use or nonstandard movement such as
 flying, riding and swimming. Auto Clutch has priority when it needs to place a
 supply. Charged combos restore the original selected slot after completion or
-cancellation if the helper still controls that slot; Swap only leaves the mace
-selected. Your own hotbar change cancels a queued combo without replacing your
+cancellation if the helper still controls that slot. Your own hotbar change cancels a queued combo without replacing your
 selection or switching the module OFF. Your next click can start a fresh combo.
 Stun Slam has priority outside a valid Falling smash click when both modules are enabled. Both start OFF on launch and turn OFF on death,
 disconnect or world replacement.
