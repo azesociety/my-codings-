@@ -1,9 +1,9 @@
-# Azeium 2.5.0
+# aze's hub 2.5.1
 
 Auto StunSlam is adapted from your uploaded `PrivateStunslamClient` source.
 Enable the module and aim at an actively raised shield: it sends an axe hit,
-then a mace follow-up on the next client tick, returns your slot and tools,
-and waits 12 ticks before retriggering. It supports multiplayer survival
+then a mace follow-up on the configured number of client ticks, returns your slot and tools,
+and waits the configured repeat delay before retriggering. It supports multiplayer survival
 players and inventory weapons, with normal server reach and damage rules.
 
 Retained from 2.4.1: restoring a saved spear shortcut no longer resolves its keyboard
@@ -15,7 +15,7 @@ New in 2.4.0: a full shared visual refresh with licensed Allura cursive brand an
 module headings, readable Open Sans controls, satin pastel gradients, rounded
 surfaces, softer highlights and consistent styling across menus and settings.
 Sixteen modules fit across two pages. Performance HUD displays actual client FPS
-and server-reported player latency without sending extra requests. It starts OFF
+and server-reported player latency without sending extra requests. Its ON/OFF toggle is saved
 and has its own saved toggle bind. Client settings includes Disable all modules.
 
 Retained from 2.3.0: Auto Mace always uses falling Smash and returns to the previous
@@ -44,7 +44,7 @@ lighting; shader packs may supply their own lighting. Session HUD shows active
 play time and horizontal distance for the current connection, with its own reset.
 Pause/focus loss, teleports and long sampling gaps do not inflate travel; changing
 dimensions clears the movement anchor and a new connection starts a new session.
-New view modules start OFF and have independent saved toggle keybinds.
+View modules have saved ON/OFF toggles and independent keybinds.
 
 A Minecraft Java 1.21.11 Fabric client mod with a Right Shift module menu,
 manual spear controls, a travel spearometer, configurable player outlines,
@@ -55,7 +55,7 @@ MIT licensed.
 
 ## Smooth movable menus and movement
 
-Azeium screens use bundled Allura cursive display headings and Open Sans controls
+aze's hub screens use bundled Allura cursive display headings and Open Sans controls
 with rounded satin gradient panels.
 Drag an empty part of the header to move the panel; its controls move with it and
 remain inside the window after resizing. Position is retained while switching
@@ -103,11 +103,11 @@ Logs are capped at 12,000 entries per session. Start a new session when needed.
 
 ## Startup compatibility
 
-Azeium 2.5.0 includes MixinExtras **0.5.5** inside its JAR and requires that version
+aze's hub 2.5.1 includes MixinExtras **0.5.5** inside its JAR and requires that version
 or newer. This resolves the reproduced `ArrayList cannot be cast to AnnotationNode`
 exception in `FactoryRedirectWrapperMixinTransformer` when MixinExtras 0.5.4
 processes the newer Redirect annotation arrays used with Sponge Mixin 0.17.4.
-Fabric Loader 0.19.3 is supported. Replace the previous Azeium JAR with this build.
+Fabric Loader 0.19.3 is supported. Replace the previous aze's hub JAR with this build.
 
 If a custom launcher still fails, check whether its new log says
 `Initializing MixinExtras ... version=0.5.5` and capture the final `Caused by` section.
@@ -117,12 +117,12 @@ validation covers the reproduced library failure and an isolated Fabric client.
 ## Install and open the menu
 
 Remove previous Spear Controls, Lunge Test Controls, Spear Test Lab, Spear Sprint
-and combined test JARs, including previous Azeium versions. Put
-`azeium-2.5.0-mc1.21.11.jar` in your Minecraft
+and combined test JARs, including previous aze's hub versions. Put
+`azes-hub-2.5.1-mc1.21.11.jar` in your Minecraft
 instance's `mods` folder alongside Fabric API. This is a client mod, not a Paper
 plugin. EntityCulling is not included or required.
 
-Press **Right Shift** to open or close **azeium**. Select a module in the sidebar,
+Press **Right Shift** to open or close **aze's hub**. Select a module in the sidebar,
 then use its ON/OFF control. Selecting a module does not enable it.
 
 The translucent menu's **Opacity** control cycles through **55%, 70% and 85%**;
@@ -130,12 +130,12 @@ the default is **70%**. Use **Menu key** to change the menu binding.
 
 Each of the sixteen modules has its own **Keybind** control. Click it, then press the
 keyboard key to assign. **Escape** cancels capture; **Delete** or **Backspace**
-clears a module binding. Duplicate Azeium module/menu keys are rejected. Module
+clears a module binding. Duplicate aze's hub module/menu keys are rejected. Module
 bindings start at **None**, fire once per key press, and only work while playing
 in a live world with no menu open. Holding a key does not repeatedly toggle it.
 
 The uploaded `gonuts-cli-0.1.0.jar` is an auction-analysis command-line application,
-with no Fabric entrypoint or Minecraft menu framework. Azeium is therefore a
+with no Fabric entrypoint or Minecraft menu framework. aze's hub is therefore a
 standalone Fabric mod rather than an extension embedded in that CLI. The supplied
 Gonuts source ZIP exceeded the environment's 32 MiB transfer limit and could not
 be inspected. `GONUTS-INPUT-ANALYSIS.md` in the download bundle records this boundary.
@@ -144,7 +144,7 @@ be inspected. `GONUTS-INPUT-ANALYSIS.md` in the download bundle records this bou
 
 **Spear** removes the local vanilla spear attack cooldown while enabled. Close
 the menu and click manually at your own pace: there is no autoclicker or generated
-attack input. Other weapons retain their normal recharge. The module starts OFF,
+attack input. Other weapons retain their normal recharge. The module defaults to OFF until you save an ON toggle,
 requires a live world to enable, and turns OFF on death or connection replacement.
 OFF restores the vanilla client cooldown. Servers still decide which attacks and
 movement they accept; this setting cannot remove server cooldown checks.
@@ -167,7 +167,7 @@ not proof of server-accepted movement or anticheat evasion.
 **Player highlights** draws outlines through blocks around other players loaded
 in your current client world. Choose Cyan, Purple, Red, Green or Gold, or enter a
 custom `#RRGGBB` value and press Apply. Colors are fully opaque, including black.
-The module starts OFF. Turning it OFF restores vanilla outlines and glowing team
+The module defaults to OFF until you save an ON toggle. Turning it OFF restores vanilla outlines and glowing team
 colors. It never highlights your own player or changes server entity metadata.
 The **Range** control cycles through **128, 256, 512 and 1024 blocks**, with
 **256** as the default. Within that range, highlights can render beyond vanilla's
@@ -179,7 +179,7 @@ players. It has its own ON/OFF control, color presets, `#RRGGBB` custom color,
 keybind and range setting, independent of Player highlights. Its range choices
 are **128, 256, 512 and 1024 blocks**, default **256**. Lines remain visible through
 terrain and fog. The module never targets your own player, obtains positions from
-the current client world, and starts OFF. Increasing the range does not obtain
+the current client world, and defaults to OFF until you save an ON toggle. Increasing the range does not obtain
 players the server has not sent to the client.
 
 **Auto Clutch** uses both bridge blocks and water by default. Its **Blocks + water**
@@ -200,7 +200,7 @@ Choose **Telly only** for the same jump bridge assistance without automatic wate
 or emergency fall recovery. You still control walking, jumping and the camera
 in both of these assistance modes.
 
-Choose **Auto Telly** to let Azeium perform the bridge sequence: walk forward,
+Choose **Auto Telly** to let aze's hub perform the bridge sequence: walk forward,
 jump, visibly look back and down to place blocks, then face forward and repeat
 after landing. Stand on a full solid bridge block, keep solid blocks in your
 hotbar or offhand, face the direction you want to extend the bridge, enable the
@@ -240,7 +240,7 @@ permissions, and does not erase existing fall damage or create supplies.
 
 Retry limits are separate for block and water attempts. A locally consumed
 interaction does not prevent a later water fallback when placement fails. Auto
-Clutch starts OFF and stops on death, disconnect or world replacement. It pauses
+Clutch defaults to OFF until you save an ON toggle and stops on death, disconnect or world replacement. It pauses
 in menus, while unfocused or using an item, and during creative/spectator flight,
 elytra flight or riding. Placement is still subject to the server's response.
 
@@ -249,7 +249,7 @@ It has an independent toggle and keybind, and hides with F1 or an open menu.
 
 **Zoom** smoothly narrows the view at **2x**, **4x** or **8x** magnification. Toggle
 it again to smoothly restore the view, or assign its own module key. Your normal
-FOV setting is retained. Zoom starts OFF and its magnification preference is saved.
+FOV setting is retained. Zoom defaults to OFF until you save an ON toggle and its magnification preference is saved.
 
 **Performance HUD** shows client FPS and reported server ping. Missing network
 data is shown as unavailable; singleplayer says Local world. The compact panel
@@ -272,8 +272,8 @@ The server may reject a distant mace hit even when a spear could reach that enti
 **Auto StunSlam** uses the user-supplied Private Stunslam add-on's crosshair
 trigger: enable it and aim at a living entity actively blocking with a raised
 shield. No click or extra activation key is required. It selects an axe and
-sends its hit, then switches to a mace and sends a follow-up on the next client
-tick. It returns your original slot and waits 12 ticks before retriggering.
+sends its hit, then switches to a mace and sends a follow-up after the configured tick
+delay. It returns your original slot and waits the configured repeat delay before retriggering.
 An axe and mace may be in the hotbar or main inventory; close other containers.
 Weapons borrowed through ordinary SWAP actions are returned after the combo.
 
@@ -309,9 +309,9 @@ current client session; the client uses vanilla connection handling.
 
 The same module page has **Rejoin now** and a separate **Rejoin key**. Click the
 bind and press a keyboard key; Escape cancels, Delete clears, and conflicts with
-other Azeium bindings are rejected. The manual rejoin key saves between launches.
+other aze's hub bindings are rejected. The manual rejoin key saves between launches.
 The module's regular Keybind toggles automatic rejoining; it is separate from the
-manual rejoin key. Auto Rejoin starts OFF each launch.
+manual rejoin key. Auto Rejoin restores its saved ON/OFF toggle each launch.
 
 ## Preferences and testing limits
 
@@ -321,8 +321,8 @@ mode and Telly speed, Zoom magnification and combat preferences, including the
 AutoMace action and separate use keys, the Quick-lunge action key and spear slot,
 the manual Rejoin key, and Armor Alerts' durability threshold.
 Spear, Player highlights, Tracers, Auto Clutch, Coordinates, Zoom, AutoMace and
-Auto StunSlam ON/OFF states are not saved; they start OFF on launch. Spearometer retains its saved visibility
-preference. When Azeium's config does not exist, it reads the old
+Auto StunSlam ON/OFF states are saved and restored when you join another world or server. Spearometer retains its saved visibility
+preference. When aze's hub's config does not exist, it reads the old
 `config/spearometer.json` as a fallback; the next
 preference change writes `azeium.json`. Measurements stay local and are never
 uploaded.
@@ -363,7 +363,7 @@ The display must already be running. The root repository README documents the
 cloud proxy/trust options when dependency downloads need them. Ordinary machines
 do not need those environment-specific options.
 
-## Inventory swaps and shield hits (2.5.0)
+## Inventory swaps and shield hits (2.5.1)
 
 Auto Mace and Stun Slam find weapons in inventory slots 9–35 as well as the hotbar.
 They use ordinary inventory SWAP actions to borrow tools, preserve displaced
@@ -374,7 +374,7 @@ returning tools is deferred while another container is open.
 Stun Slam requires an actively raised shield when its automatic sequence starts.
 Aim within ordinary axe range, on the shield-facing side of the opponent.
 The server decides whether the shield blocks, is disabled, or accepts either hit.
-Its next-tick mace follow-up uses the uploaded add-on's short timing instead of
+Its configurable mace follow-up uses the uploaded add-on's short timing instead of
 the previous charged manual-click combo. Settings from that older combo are ignored.
 
 ## Autoclicker
@@ -384,7 +384,7 @@ continuously until disabled) or **Hold mouse** (click only while the selected
 mouse action is physically held). **Click** selects left/attack or right/use.
 **Rate** cycles 1, 2, 4, 6, 8, 10, 12, 16 and 20 requested clicks per second.
 Assign its normal module keybind for quick ON/OFF control. Mode, button and rate
-are saved; the module starts OFF on launch and stops on death or world changes.
+are saved; the module restores its saved toggle on launch and stops on death or world changes.
 Menus, focus loss, held item use and other active gameplay actions pause it.
 It follows client ticks and never catches up with a burst after lag. Normal item
 cooldowns and server hit acceptance still apply. AFK clicking requires the game
@@ -402,3 +402,18 @@ world first.
 Validation exercises actual Minecraft item prediction, packet ordering, inventory
 swaps, keyboard input, jump impulse, acceleration, crouch edge safety and collision
 in controlled fixtures. These fixtures are not a joined multiplayer-server test.
+
+## Saved toggles and Stun Slam timing (2.5.1)
+
+The client is now named **aze's hub**. In Auto StunSlam, **Mace delay**
+cycles 1–40 client ticks between the axe and mace attacks. **Repeat delay**
+cycles 1–60 client ticks before another automatic combo. Defaults remain
+1 and 12 ticks. Twenty client ticks are about one second at normal speed;
+these controls change timing, not damage or server acceptance.
+
+Module ON/OFF choices and timing settings are saved in the existing
+`config/azeium.json`, preserving your previous keybinds and settings.
+Saved toggles restore when you join another server or world or restart Minecraft.
+Gameplay modules resume once a live player exists and their normal conditions
+are met. Death/disconnect still cancels pending attacks and inventory loans.
+**Disable all modules** also saves OFF for every module.

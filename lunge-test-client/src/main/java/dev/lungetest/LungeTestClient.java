@@ -24,7 +24,7 @@ import java.util.Map;
 
 /** Azeium client modules. Spear input stays manual; Auto Clutch is an independent item-use helper. */
 public final class LungeTestClient implements ClientModInitializer {
-    public static final Logger LOG = LoggerFactory.getLogger("Azeium");
+    public static final Logger LOG = LoggerFactory.getLogger("aze's hub");
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static final Path CONFIG = FabricLoader.getInstance().getConfigDir().resolve("azeium.json");
     private static final SpearMetrics METRICS = new SpearMetrics();
@@ -54,7 +54,7 @@ public final class LungeTestClient implements ClientModInitializer {
                 Settings loaded = GSON.fromJson(Files.readString(settingsPath()), Settings.class);
                 if (loaded != null) settings = loaded;
             }
-        } catch (Exception e) { LOG.warn("Could not load Azeium preferences; using defaults", e); }
+        } catch (Exception e) { LOG.warn("Could not load aze's hub preferences; using defaults", e); }
         if (settings.mode == null) settings.mode = HudMode.TRAVEL;
         if (settings.corner == null) settings.corner = HudCorner.TOP_LEFT;
         PlayerHighlightModule.setColor(settings.highlightColor);
@@ -79,6 +79,7 @@ public final class LungeTestClient implements ClientModInitializer {
         ThemeManager.initialize(settings.theme);
         ShieldDrainerModule.initialize(settings.shieldTest);
         AutoClickerModule.initialize(settings.clicker);
+        AutoStunSlamModule.initialize(settings.stun);
         METRICS.reset(System.nanoTime());
         ClientTickEvents.START_CLIENT_TICK.register(client -> {
             if (enabled && (client.getConnection() != armedConnection || client.player == null
@@ -98,6 +99,7 @@ public final class LungeTestClient implements ClientModInitializer {
             CombatAssistModule.tick(client);
             ShieldDrainerModule.tick(client);
             AutoClickerModule.tick(client);
+            restoreModuleToggles(client);
             CombatTestLog.tick();
             SessionHudModule.tick(client);
             if (!syncMetricsContext(client) || !client.player.isAlive() || client.isPaused()
@@ -118,7 +120,7 @@ public final class LungeTestClient implements ClientModInitializer {
                 (message, overlay) -> CombatTestLog.observation(message.getString()));
         net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents.CHAT.register(
                 (message, signed, sender, parameters, received) -> CombatTestLog.observation(message.getString()));
-        LOG.info("Azeium 2.5.0 loaded; the menu key opens modules. Auto Telly can jump, turn and bridge automatically; gameplay helpers start OFF.");
+        LOG.info("aze's hub 2.5.1 loaded; the menu key opens modules. Auto Telly can jump, turn and bridge automatically; saved module toggles resume in live worlds.");
     }
 
     public static boolean isSpear(ItemStack stack) {
@@ -183,7 +185,7 @@ public final class LungeTestClient implements ClientModInitializer {
             var folder = FabricLoader.getInstance().getGameDir().resolve("logs/spearometer");
             Files.createDirectories(folder);
             var report = new JsonObject();
-            report.addProperty("modVersion", "2.5.0");
+            report.addProperty("modVersion", "2.5.1");
             report.addProperty("minecraftVersion", "1.21.11");
             report.addProperty("exportedAt", Instant.now().toString());
             report.addProperty("measurementSource", "client");
@@ -275,12 +277,33 @@ public final class LungeTestClient implements ClientModInitializer {
         settings.shieldTest = ShieldDrainerModule.preferences();
         saveSettings();
     }
+    private static Object restoredWorld, restoredPlayer;
+    private static boolean restoredInitial;
+    private static void restoreModuleToggles(Minecraft client) {
+        if (restoredInitial && restoredWorld == client.level && restoredPlayer == client.player) return;
+        restoredInitial = true; restoredWorld = client.level; restoredPlayer = client.player;
+        if (settings.moduleToggles == null) settings.moduleToggles = new LinkedHashMap<>();
+        for (var module : AzeiumModules.Module.values()) {
+            Boolean desired = settings.moduleToggles.get(module.name());
+            if (desired != null && module.enabled() != desired && module.canToggle(client)) module.applyToggle(client);
+        }
+    }
+    public static void saveModuleToggle(AzeiumModules.Module module) {
+        if (settings.moduleToggles == null) settings.moduleToggles = new LinkedHashMap<>();
+        settings.moduleToggles.put(module.name(), module.enabled()); saveSettings();
+    }
+    public static void saveAllModuleToggles() {
+        settings.moduleToggles = new LinkedHashMap<>();
+        for (var module : AzeiumModules.Module.values()) settings.moduleToggles.put(module.name(), module.enabled());
+        saveSettings();
+    }
+    public static void saveStunPreferences() { settings.stun = AutoStunSlamModule.preferences(); saveSettings(); }
     public static void saveClickerPreferences() { settings.clicker = AutoClickerModule.preferences(); saveSettings(); }
     private static void saveSettings() {
         try {
             Files.createDirectories(CONFIG.getParent());
             Files.writeString(CONFIG, GSON.toJson(settings));
-        } catch (Exception e) { LOG.warn("Could not save Azeium preferences", e); }
+        } catch (Exception e) { LOG.warn("Could not save aze's hub preferences", e); }
     }
     public static void saveZoomFactor() {
         settings.zoomFactor = ZoomModule.factor();
@@ -320,6 +343,8 @@ public final class LungeTestClient implements ClientModInitializer {
         Map<String, CombatAssistModule.Preferences> combat = new LinkedHashMap<>();
         ThemeManager.Preferences theme = new ThemeManager.Preferences();
         ShieldDrainerModule.Preferences shieldTest = new ShieldDrainerModule.Preferences();
+        Map<String, Boolean> moduleToggles = new LinkedHashMap<>();
+        AutoStunSlamModule.Preferences stun = new AutoStunSlamModule.Preferences();
         AutoClickerModule.Preferences clicker = new AutoClickerModule.Preferences();
         AutoClutchModule.Mode clutchMode = AutoClutchModule.Mode.BOTH;
         AutoClutchModule.TellySpeed tellySpeed = AutoClutchModule.TellySpeed.FAST;

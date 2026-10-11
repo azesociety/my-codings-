@@ -25,7 +25,7 @@ public final class ClientSettingsScreen extends AzeiumScreen {
     private Button bind;
     private final long openedAt = System.nanoTime();
     public ClientSettingsScreen(Screen parent, Page page) {
-        super(Component.literal("Azeium settings"));
+        super(Component.literal("aze's hub settings"));
         this.parent = parent;
         this.page = page;
     }

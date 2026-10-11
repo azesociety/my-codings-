@@ -1214,6 +1214,42 @@ public final class CombatAssistVerification {
                             && player.inventory.getSelectedSlot() == 0 && player.inventory.getItem(12).is(Items.DIAMOND_AXE),
                     "Opening a screen cancels the uploaded sequence and returns borrowed items without a mace attack");
             dev.lungetest.AutoStunSlamModule.setEnabled(false);
+            var timing = new dev.lungetest.AutoStunSlamModule.Preferences();
+            timing.followUpTicks = 5; timing.retriggerTicks = 20;
+            dev.lungetest.AutoStunSlamModule.initialize(timing);
+            connection.packets.clear(); dev.lungetest.AutoStunSlamModule.setEnabled(true);
+            dev.lungetest.AutoStunSlamModule.tick(client);
+            for (int i = 0; i < 4; i++) dev.lungetest.AutoStunSlamModule.tick(client);
+            require(attacks(connection) == 1, "Custom five-tick delay holds the mace follow-up for four intervening ticks");
+            dev.lungetest.AutoStunSlamModule.tick(client);
+            require(attacks(connection) == 2, "Custom mace delay dispatches on its fifth tick");
+            for (int i = 0; i < 20; i++) dev.lungetest.AutoStunSlamModule.tick(client);
+            require(attacks(connection) == 2, "Custom twenty-tick retrigger delay prevents an early combo");
+            dev.lungetest.AutoStunSlamModule.tick(client);
+            require(attacks(connection) == 3, "Custom repeat delay permits the next combo afterward");
+            dev.lungetest.AutoStunSlamModule.setEnabled(false);
+            dev.lungetest.AutoStunSlamModule.initialize(new dev.lungetest.AutoStunSlamModule.Preferences());
+            var settingsField = LungeTestClient.class.getDeclaredField("settings"); settingsField.setAccessible(true);
+            var settingsObject = settingsField.get(null);
+            var togglesField = settingsObject.getClass().getDeclaredField("moduleToggles"); togglesField.setAccessible(true);
+            Object previousToggles = togglesField.get(settingsObject);
+            togglesField.set(settingsObject, new java.util.LinkedHashMap<String, Boolean>());
+            var previousLevel = client.level;
+            var restore = LungeTestClient.class.getDeclaredMethod("restoreModuleToggles", Minecraft.class); restore.setAccessible(true);
+            try {
+                dev.lungetest.AzeiumModules.Module.AUTO_STUNSLAM.toggle(client);
+                dev.lungetest.AutoStunSlamModule.setEnabled(false);
+                restore.invoke(null, client);
+                require(dev.lungetest.AutoStunSlamModule.enabled(), "Saved ON module restores when joining a live world");
+                dev.lungetest.AutoStunSlamModule.setEnabled(false);
+                client.level = (CombatLevel) ((Unsafe) getUnsafe()).allocateInstance(CombatLevel.class);
+                restore.invoke(null, client);
+                require(dev.lungetest.AutoStunSlamModule.enabled(), "Saved ON module restores again in a different world");
+                dev.lungetest.AzeiumModules.disableAll(client);
+                client.level = previousLevel; restore.invoke(null, client);
+                require(!dev.lungetest.AutoStunSlamModule.enabled(), "Disable all saves OFF so another join does not re-enable modules");
+            } catch (InstantiationException error) { throw new AssertionError(error); }
+            finally { client.level = previousLevel; togglesField.set(settingsObject, previousToggles); dev.lungetest.AutoStunSlamModule.setEnabled(false); }
         } finally {
             dev.lungetest.AutoStunSlamModule.setEnabled(false);
             CombatAssistModule.setEnabled(SLAM, false);
@@ -1286,6 +1322,9 @@ public final class CombatAssistVerification {
         }
     }
 
+    private static Object getUnsafe() throws ReflectiveOperationException {
+        var field = Unsafe.class.getDeclaredField("theUnsafe"); field.setAccessible(true); return field.get(null);
+    }
     private static void hold(Minecraft client, CombatAssistModule.Feature feature, boolean pressed) {
         boolean handled = CombatAssistModule.handleActivationKey(client,
                         pressed ? GLFW.GLFW_PRESS : GLFW.GLFW_RELEASE,

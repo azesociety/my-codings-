@@ -95,7 +95,7 @@ public final class GuiVerification implements ClientModInitializer {
             finished = true;
             require(!LungeTestClient.enabled(), "Cooldown removal starts OFF");
             var screen = (LungeTestScreen) client.screen;
-            require(screen.getTitle().getString().equalsIgnoreCase("Azeium"), "Menu is named Azeium");
+            require(screen.getTitle().getString().equalsIgnoreCase("aze's hub"), "Menu is named aze's hub");
             require(screen.selectedModule() == AzeiumModules.Module.SPEAR, "Spear controls are the initial module");
             require(!button(screen, "Enable module").active, "Cannot enable spear cooldown removal without a world");
             for (String label : List.of("Spear", "Spearometer", "Player highlights", "Tracers", "Auto Clutch", "Coordinates", "Zoom", "Done", "Previous", "Next"))
@@ -614,6 +614,13 @@ public final class GuiVerification implements ClientModInitializer {
                 }), "StunSlam has no activation, target, strategy or use-key settings");
                 require(!dev.lungetest.AutoStunSlamModule.busy(),
                         "Uploaded Stun Slam starts idle without a pending attack");
+                var old = new com.google.gson.Gson().fromJson(new com.google.gson.Gson().toJson(
+                        dev.lungetest.AutoStunSlamModule.preferences()), dev.lungetest.AutoStunSlamModule.Preferences.class);
+                button(screen, dev.lungetest.AutoStunSlamModule.delayLabel()).onPress(key);
+                require(dev.lungetest.AutoStunSlamModule.preferences().followUpTicks != old.followUpTicks, "Actual Stun Slam delay control changes ticks");
+                button(screen, dev.lungetest.AutoStunSlamModule.retryLabel()).onPress(key);
+                require(dev.lungetest.AutoStunSlamModule.preferences().retriggerTicks != old.retriggerTicks, "Actual Stun Slam repeat control changes ticks");
+                dev.lungetest.AutoStunSlamModule.initialize(old); LungeTestClient.saveStunPreferences();
                 continue;
             }
             var originalActivation = CombatAssistModule.activation(feature);

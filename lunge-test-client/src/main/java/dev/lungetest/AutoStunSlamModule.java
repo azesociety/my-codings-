@@ -13,8 +13,18 @@ import net.minecraft.world.phys.EntityHitResult;
 
 /** Adapted from the user-supplied PrivateStunslamClient: crosshair axe, then mace. */
 public final class AutoStunSlamModule {
-    private static final int FOLLOW_UP_TICKS = 1;
-    private static final int RETRIGGER_DELAY_TICKS = 12;
+    public static final class Preferences { public int followUpTicks = 1; public int retriggerTicks = 12; }
+    private static Preferences prefs = new Preferences();
+    public static void initialize(Preferences saved) {
+        prefs = saved == null ? new Preferences() : saved;
+        prefs.followUpTicks = Math.clamp(prefs.followUpTicks, 1, 40);
+        prefs.retriggerTicks = Math.clamp(prefs.retriggerTicks, 1, 60);
+    }
+    public static Preferences preferences() { return prefs; }
+    public static String delayLabel() { return "Mace delay: " + prefs.followUpTicks + " ticks"; }
+    public static String retryLabel() { return "Repeat delay: " + prefs.retriggerTicks + " ticks"; }
+    public static void cycleDelay() { prefs.followUpTicks = prefs.followUpTicks % 40 + 1; LungeTestClient.saveStunPreferences(); }
+    public static void cycleRetry() { prefs.retriggerTicks = prefs.retriggerTicks % 60 + 1; LungeTestClient.saveStunPreferences(); }
     private static final InventoryHotbarLease inventory = new InventoryHotbarLease();
     private static boolean enabled, dispatching;
     private static LivingEntity pendingTarget;
@@ -51,7 +61,7 @@ public final class AutoStunSlamModule {
             cancel(client); status = "Paused: screen, movement or another action"; return;
         }
         if (ownedSlot >= 0 && client.player.getInventory().getSelectedSlot() != ownedSlot) {
-            cancel(client); retriggerDelay = RETRIGGER_DELAY_TICKS; status = "Cancelled: you changed slots"; return;
+            cancel(client); retriggerDelay = prefs.retriggerTicks; status = "Cancelled: you changed slots"; return;
         }
         if (pendingTarget != null) {
             if (--followUpIn > 0) return;
@@ -62,7 +72,7 @@ public final class AutoStunSlamModule {
                 status = "Axe + mace sent; normal damage rules apply";
             } else status = "Follow-up cancelled: target, reach or mace lost";
             cancel(client);
-            retriggerDelay = RETRIGGER_DELAY_TICKS;
+            retriggerDelay = prefs.retriggerTicks;
             return;
         }
         if (retriggerDelay > 0) { retriggerDelay--; return; }
@@ -85,8 +95,8 @@ public final class AutoStunSlamModule {
         }
         attack(client, target);
         pendingTarget = target;
-        followUpIn = FOLLOW_UP_TICKS;
-        status = "Axe hit sent; mace next tick";
+        followUpIn = prefs.followUpTicks;
+        status = "Axe hit sent; mace in " + followUpIn + " ticks";
     }
     private static boolean valid(Minecraft client, LivingEntity target) {
         if (target == null || target == client.player || !target.isAlive() || target.level() != client.level

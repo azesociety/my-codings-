@@ -38,7 +38,7 @@ public final class LungeTestScreen extends AzeiumScreen {
     private long lastFrameAt = openedAt;
     private float visibility, tabVisibility = 1, selectedRailY = Float.NaN;
 
-    public LungeTestScreen() { super(Component.literal("Azeium")); }
+    public LungeTestScreen() { super(Component.literal("aze's hub")); }
     public AzeiumModules.Module selectedModule() { return selected; }
     public boolean capturingKeybind() { return captureMenu || captureRejoin || captureSpear || captureModule != null || captureActivation != null; }
 
@@ -86,7 +86,7 @@ public final class LungeTestScreen extends AzeiumScreen {
         opacity.setTooltip(hint("Choose 55%, 70% or 85% panel opacity. The world stays visible behind this menu."));
         menuKey = addButton(left + 10, top + panelHeight() - 22, side - 20, 16,
                 menuKeyLabel(), b -> beginCapture(null, true));
-        menuKey.setTooltip(hint("Choose the key that opens and closes Azeium. Escape cancels key capture."));
+        menuKey.setTooltip(hint("Choose the key that opens and closes aze's hub. Escape cancels key capture."));
 
         toggle = addButton(x, top + (compact() ? 75 : 87), w, 20, toggleLabel(), b -> {
             selected.toggle(minecraft); refreshButtons();
@@ -152,7 +152,10 @@ public final class LungeTestScreen extends AzeiumScreen {
                 mode.setTooltip(hint("Choose 2x, 4x or 8x magnification. Toggle Zoom or bind a module key."));
             }
             case AUTO_MACE -> buildCombatControls(x, w, settings);
-            case AUTO_STUNSLAM -> { }
+            case AUTO_STUNSLAM -> {
+                addButton(x, settings, w, 18, AutoStunSlamModule.delayLabel(), b -> { AutoStunSlamModule.cycleDelay(); selectModule(selected); });
+                addButton(x, settings + 23, w, 18, AutoStunSlamModule.retryLabel(), b -> { AutoStunSlamModule.cycleRetry(); selectModule(selected); });
+            }
             case AUTO_CLICKER -> {
                 addButton(x, settings, w, 18, AutoClickerModule.modeLabel(), b -> { AutoClickerModule.cycleMode(); selectModule(selected); });
                 addButton(x, settings + 23, w, 18, AutoClickerModule.buttonLabel(), b -> { AutoClickerModule.cycleButton(); selectModule(selected); });
@@ -555,10 +558,10 @@ public final class LungeTestScreen extends AzeiumScreen {
                 }
             }
             case AUTO_STUNSLAM -> {
-                text(g, AutoStunSlamModule.status(), x, settings + 3, ACCENT, contentWidth);
-                text(g, "Aim at a raised shield. Axe, then mace.", x, settings + 24, TEXT, contentWidth);
-                text(g, "Tools can be anywhere in your inventory.", x, settings + 45, MUTED, contentWidth);
-                if (!compact()) text(g, "Automatic timing. No extra use key.", x, settings + 75, MUTED, contentWidth);
+                text(g, AutoStunSlamModule.status(), x, settings + 50, ACCENT, contentWidth);
+                text(g, "Aim at a raised shield. Axe, then mace.", x, settings + 73, TEXT, contentWidth);
+                text(g, "Tools can be anywhere in your inventory.", x, settings + 96, MUTED, contentWidth);
+
             }
             case AUTO_MACE -> {
                 if (!compact()) {
