@@ -1,0 +1,49 @@
+plugins { id 'net.fabricmc.fabric-loom-remap' version '1.14.10' }
+version = '2.2.0'
+group = 'dev.lungetest'
+repositories { mavenCentral() }
+dependencies {
+    minecraft 'com.mojang:minecraft:1.21.11'
+    mappings loom.officialMojangMappings()
+    modImplementation 'net.fabricmc:fabric-loader:0.19.3'
+    modImplementation 'net.fabricmc.fabric-api:fabric-api:0.141.6+1.21.11'
+    // 0.5.5 handles the Redirect annotation arrays used by newer Sponge Mixin builds.
+    modImplementation include('io.github.llamalad7:mixinextras-fabric:0.5.5')
+    if (project.hasProperty('startupVerificationMixin')) {
+        runtimeOnly "net.fabricmc:sponge-mixin:${project.property('startupVerificationMixin')}"
+    }
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.11.4'
+}
+tasks.withType(JavaCompile).configureEach { options.release = 21 }
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
+jar { from('LICENSE') }
+tasks.test { useJUnitPlatform() }
+
+sourceSets {
+    guiVerification {
+        compileClasspath += sourceSets.main.compileClasspath + sourceSets.main.output
+        runtimeClasspath += sourceSets.main.runtimeClasspath + sourceSets.main.output
+    }
+}
+loom {
+    mods {
+        lunge_test_client { sourceSet sourceSets.main }
+        lunge_test_gui_verification { sourceSet sourceSets.guiVerification }
+    }
+    runs {
+        guiVerification {
+            client()
+            source sourceSets.guiVerification
+            runDir 'run-gui-verification'
+            programArg '--width=1024'
+            programArg '--height=768'
+        }
+    }
+}
+
+base { archivesName = 'azeium' }
+tasks.named('remapJar') { archiveFileName = 'azeium-2.2.0-mc1.21.11.jar' }

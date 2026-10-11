@@ -1,0 +1,4 @@
+Open Sans Regular
+Digitized data copyright (c) 2010-2011, Google Corporation.
+Distributed under the Apache License, Version 2.0. See LICENSE-OpenSans.txt.
+The font has not been modified.

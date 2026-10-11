@@ -1,0 +1,21 @@
+{
+  "required": true,
+  "package": "dev.lungetest.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "PlayerCooldownMixin",
+    "KeyboardMenuMixin",
+    "ManualAttackMixin",
+    "CombatAttackMixin",
+    "PositionSyncMixin",
+    "ClutchMoveMixin",
+    "TellyInputMixin",
+    "ZoomMixin",
+    "PlayerHighlightColorMixin",
+    "PlayerHighlightVisibilityMixin",
+    "FullbrightMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

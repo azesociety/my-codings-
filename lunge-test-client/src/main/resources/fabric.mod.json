@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "lunge_test_client",
+  "version": "2.2.0",
+  "name": "Azeium",
+  "description": "Smooth movable gradient menus, manual spear controls, travel meter, player outlines, tracers, Auto Telly, clutch assistance, same-click falling Auto Mace, automatic axe-to-mace Stun Slam, combat test logs, Auto Rejoin, a saved spear quick-lunge action key, Armor Alerts, Fullbright and Session HUD with a paged module browser.",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "dev.lungetest.LungeTestClient"
+    ]
+  },
+  "mixins": [
+    "lunge_test_client.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.19.3",
+    "minecraft": "=1.21.11",
+    "java": ">=21",
+    "fabric-api": "*",
+    "mixinextras": ">=0.5.5"
+  },
+  "license": "MIT",
+  "icon": "assets/lunge_test_client/icon.png"
+}
