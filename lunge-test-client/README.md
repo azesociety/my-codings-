@@ -1,8 +1,10 @@
-# Azeium 2.4.3
+# Azeium 2.4.4
+
+Stun Slam starts only when enabled and you click an actively blocking target. Merely holding a shield does not trigger it. The mace follow-up continues after the axe hit even if the shield is then lowered or disabled.
 
 Stun Slam now selects its axe before vanilla routes a spear click. It also takes priority over Auto Mace on valid combo clicks while falling. Cancelled clicks restore the original slot without queuing a combo.
 
-Stun Slam now supports manually clicked survival players, using the same charged axe-to-mace sequence and original-slot return as mob combat. Allied players remain excluded.
+Stun Slam now supports manually clicked survival players, using the same charged axe-to-mace sequence and original-slot return as mob combat. Teammates are supported when team friendly fire is enabled.
 
 Retained from 2.4.1: restoring a saved spear shortcut no longer resolves its keyboard
 label before GLFW initializes. This fixes the reproduced "GLFW library is not
@@ -87,7 +89,7 @@ manual slot changes, death or disconnect stop an armed trial. Other combat/bridg
 modules must be disabled to avoid overlapping trial actions.
 
 Auto Mace exposes Smash, Reach and activation controls. Smash has no queued extra hit.
-Stun Slam has no timing or strategy settings: enable it and click a player or hostile mob.
+Stun Slam has no timing or strategy settings: enable it and click a target actively blocking with a raised shield.
 It automatically attacks with a hotbar axe, then a hotbar mace, using normal charge.
 Legacy Stun Slam preferences are ignored when loading existing configurations.
 
@@ -101,7 +103,7 @@ Logs are capped at 12,000 entries per session. Start a new session when needed.
 
 ## Startup compatibility
 
-Azeium 2.4.3 includes MixinExtras **0.5.5** inside its JAR and requires that version
+Azeium 2.4.4 includes MixinExtras **0.5.5** inside its JAR and requires that version
 or newer. This resolves the reproduced `ArrayList cannot be cast to AnnotationNode`
 exception in `FactoryRedirectWrapperMixinTransformer` when MixinExtras 0.5.4
 processes the newer Redirect annotation arrays used with Sponge Mixin 0.17.4.
@@ -116,7 +118,7 @@ validation covers the reproduced library failure and an isolated Fabric client.
 
 Remove previous Spear Controls, Lunge Test Controls, Spear Test Lab, Spear Sprint
 and combined test JARs, including previous Azeium versions. Put
-`azeium-2.4.3-mc1.21.11.jar` in your Minecraft
+`azeium-2.4.4-mc1.21.11.jar` in your Minecraft
 instance's `mods` folder alongside Fabric API. This is a client mod, not a Paper
 plugin. EntityCulling is not included or required.
 
@@ -267,13 +269,12 @@ Vanilla. Visibility and item cooldowns remain checked. Extended reach applies on
 to an entity already selected by the crosshair: it does not extend crosshair picking.
 The server may reject a distant mace hit even when a spear could reach that entity.
 
-**Auto StunSlam** turns a manual attack on a player or hostile mob into an **Axe + mace**
+**Auto StunSlam** turns a manual attack on a target actively blocking with a shield into an **Axe + mace**
 combo. It selects a hotbar axe, waits for its normal charge and attacks, then
 switches to a hotbar mace and waits for a charged follow-up. These are two
 separate ordinary attacks; the module does not send an instant double click or
 remove mace/axe cooldowns. An axe can disable an actual blocking shield according
-to vanilla rules. Zombies and wardens have no shield to disable, so this mode is
-an axe hit followed by a mace hit, with no added stun effect.
+to vanilla rules. Ordinary zombies and wardens do not block with shields and therefore do not trigger this module.
 
 Stun Slam keeps the player or mob you clicked as its target. It needs no extra activation
 key, target selection, timing sliders or mode choices. Its module toggle and optional
@@ -282,7 +283,7 @@ ON/OFF keybind remain available. A new manual click starts each combo.
 AutoMace defaults to **Automatic** activation. Its optional **Hold key** mode
 requires its **Use key** (default **R**) during the falling hit.
 
-Stun Slam supports manually clicked survival players and hostile mobs. Creative and spectator players, allies, pets and passive animals are excluded.
+Stun Slam supports manually clicked survival players and hostile mobs. Creative and spectator players, teammates with friendly fire disabled, pets and passive animals are excluded.
 Charged combos require normal item charge, attack reach and line of
 sight. They pause for menus, lost focus, item use or nonstandard movement such as
 flying, riding and swimming. Auto Clutch has priority when it needs to place a

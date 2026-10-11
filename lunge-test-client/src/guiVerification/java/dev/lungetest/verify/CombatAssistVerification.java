@@ -154,7 +154,9 @@ public final class CombatAssistVerification {
             verifySwapPreferences();
             setMaceAction(CombatAssistModule.MaceAction.FALLING_SMASH);
             verifyFallingSmash(client, player, level, zombie, connection);
+            zombie.blocking = true;
             verifyAxeCombo(client, player, level, zombie, connection);
+            zombie.blocking = false;
             verifyPlayerCombo(client, player, level, connection, unsafe);
             LungeTestClient.LOG.info("COMBAT_ASSIST_VERIFIED: {} checks; same-click falling Smash, original-slot restoration, preference migration and fixed axe-to-mace combos, hold/release, session/focus guards and shared action budget; no network transport", checks);
         } catch (ReflectiveOperationException e) {
@@ -267,6 +269,7 @@ public final class CombatAssistVerification {
             player.fallDistance = 2.5;
             restart(client, player, connection, MACE);
             CombatAssistModule.setEnabled(SLAM, true);
+            zombie.blocking = true;
             client.gameMode.attack(player, zombie);
             tick(client, player, 1);
             recharge(player);
@@ -279,6 +282,7 @@ public final class CombatAssistVerification {
             require(attacks(connection) == 2 && player.lastAttackStack.is(Items.MACE)
                             && player.inventory.getSelectedSlot() == 0,
                     "The falling Stun Slam finishes with the mace and restores the original slot");
+            zombie.blocking = false;
             for (String guard : List.of("range", "wall", "cooldown", "missing mace", "menu", "focus")) {
                 restart(client, player, connection, MACE);
                 if (guard.equals("range")) locate(zombie, new Vec3(.5, 3, 8));
@@ -918,7 +922,7 @@ public final class CombatAssistVerification {
         recharge(player);
         tick(client, player, 2);
         require(attacks(connection) == 1 && player.lastAttackStack.is(Items.DIAMOND_AXE),
-                "A charged first combo stage sends a normal axe attack even when the zombie has no shield");
+                "A charged first combo stage sends a normal axe attack on the blocking target");
         require(hasSlotBeforeAttack(connection, 7, 1), "The ordinary carried-item packet precedes the axe hit");
         tick(client, player, 2);
         require(attacks(connection) == 1 && player.inventory.getSelectedSlot() == 3,
@@ -992,6 +996,7 @@ public final class CombatAssistVerification {
         target.offhand = new ItemStack(Items.SHIELD);
         target.velocity = Vec3.ZERO;
         target.alive = true;
+        target.blocking = true;
         target.setId(903);
         set(Entity.class, target, "eyeHeight", 1.62F);
         locate(target, new Vec3(.5, 3, 2.5));
@@ -1001,6 +1006,21 @@ public final class CombatAssistVerification {
         player.fallDistance = 0;
         client.hitResult = new EntityHitResult(target);
         client.crosshairPickEntity = target;
+        target.blocking = false;
+        restart(client, player, connection, SLAM);
+        client.gameMode.attack(player, target);
+        for (int i = 0; i < 8; i++) { recharge(player); tick(client, player, 1); }
+        require(attacks(connection) == 1 && player.lastAttackStack.is(Items.DIAMOND_SWORD)
+                        && player.inventory.getSelectedSlot() == 0,
+                "Holding an unused shield preserves the ordinary manual hit and never starts Stun Slam");
+        target.blocking = true;
+        restart(client, player, connection, SLAM);
+        client.gameMode.attack(player, target);
+        target.blocking = false;
+        tick(client, player, 3);
+        require(attacks(connection) == 0 && player.inventory.getSelectedSlot() == 0,
+                "Lowering the shield before the axe stage cancels the combo and returns the slot");
+        target.blocking = true;
         restart(client, player, connection, SLAM);
         client.gameMode.attack(player, target);
         require(attacks(connection) == 0, "A deliberate player click queues Stun Slam before the original attack");
@@ -1010,6 +1030,7 @@ public final class CombatAssistVerification {
         require(attacks(connection) == 1 && player.lastAttackStack.is(Items.DIAMOND_AXE)
                 && player.lastPredictedTarget == target, "The axe stage attacks the clicked player");
         require(hasSlotBeforeAttack(connection, 7, 1), "Player combo synchronizes the axe before its hit");
+        target.blocking = false;
         tick(client, player, 2);
         recharge(player);
         tick(client, player, 4);
@@ -1020,6 +1041,7 @@ public final class CombatAssistVerification {
         recharge(player);
         tick(client, player, 90);
         require(attacks(connection) == 2, "Player Stun Slam never repeats without another manual click");
+        target.blocking = true;
         var startAttack = Minecraft.class.getDeclaredMethod("startAttack");
         startAttack.setAccessible(true);
         var missTime = Minecraft.class.getDeclaredField("missTime");
@@ -1080,7 +1102,12 @@ public final class CombatAssistVerification {
         restart(client, player, connection, SLAM);
         var team = new PlayerTeam(new Scoreboard(), "survival-allies");
         player.team = target.team = team;
-        require(!CombatAssistModule.beginManualAttack(client, target), "Stun Slam preserves allied-player exclusion");
+        team.setAllowFriendlyFire(false);
+        require(!CombatAssistModule.beginManualAttack(client, target), "Stun Slam respects disabled team friendly fire");
+        team.setAllowFriendlyFire(true);
+        require(CombatAssistModule.beginManualAttack(client, target), "A blocking teammate click works with friendly fire enabled");
+        CombatAssistModule.setEnabled(SLAM, false);
+        restart(client, player, connection, SLAM);
         player.team = target.team = null;
         client.gameMode.attack(player, target);
         tick(client, player, 1);
@@ -1189,7 +1216,7 @@ public final class CombatAssistVerification {
         Vec3 velocity;
         ClientLevel fixtureLevel;
         PlayerTeam team;
-        boolean alive, grounded, using, spectator, flying, water, lava, climbing, creative, passenger, killOnAttack;
+        boolean alive, grounded, using, blocking, spectator, flying, water, lava, climbing, creative, passenger, killOnAttack;
         int predictedAttacks;
         Entity lastPredictedTarget;
         ItemStack lastAttackStack;
@@ -1223,6 +1250,7 @@ public final class CombatAssistVerification {
         @Override public boolean isShiftKeyDown() { return false; }
         @Override public boolean isSecondaryUseActive() { return false; }
         @Override public boolean isUsingItem() { return using; }
+        @Override public boolean isBlocking() { return blocking; }
         @Override public boolean isSpectator() { return spectator; }
         @Override public boolean isCreative() { return creative; }
         @Override public boolean hasInfiniteMaterials() { return false; }

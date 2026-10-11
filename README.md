@@ -1,8 +1,8 @@
-# Azeium 2.4.3
+# Azeium 2.4.4
 
 Minecraft Java 1.21.11 · Fabric Loader 0.19.3+ · Java 21 · Fabric API.
 
-- [Download the mod JAR](https://github.com/azesociety/my-codings-/raw/refs/heads/main/azeium-2.4.3-mc1.21.11.jar)
+- [Download the mod JAR](https://github.com/azesociety/my-codings-/raw/refs/heads/main/azeium-2.4.4-mc1.21.11.jar)
 - [Browse the source project](lunge-test-client/)
 - [Installation and controls](lunge-test-client/README.md)
 
@@ -10,7 +10,7 @@ Replace the older Azeium JAR in your instance's mods folder. Build the source
 with Java 21 using `gradlew.bat build` (Windows) or `./gradlew build` (Linux/macOS)
 inside `lunge-test-client`. The first build downloads dependencies.
 
-Stun Slam supports manually clicked survival players and hostile mobs, including clicks while holding a spear. Valid Stun Slam combos take priority over Auto Mace while falling.
+Stun Slam starts when enabled and you click a raised shield, including clicks while holding a spear. Holding an unused shield does not trigger it. Valid Stun Slam combos take priority over Auto Mace while falling.
 
 Startup fix: saved spear keyboard binds no longer look up key names before GLFW initializes. Keep your existing settings.
 

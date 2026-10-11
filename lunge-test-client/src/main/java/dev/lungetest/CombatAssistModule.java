@@ -271,6 +271,7 @@ public final class CombatAssistModule {
         }
     }
     private static String idleStatus(Feature feature) {
+        if (feature == Feature.STUNSLAM) return "Click a raised shield to start";
         if (feature == Feature.MACE && maceAction() == MaceAction.FALLING_SMASH)
             return activation(feature) == Activation.AUTOMATIC ? "Fall and click: hit with your mace"
                     : "Hold " + activationKeyLabel(feature) + " and click while falling";
@@ -331,6 +332,7 @@ public final class CombatAssistModule {
             return;
         }
         if (state.stage == Stage.READY) {
+            if (!target.isBlocking()) { finish(client, state, "Shield lowered: click a raised shield again"); return; }
             if (!inReach(player, target, state)) { state.status = "Move within axe reach"; return; }
             if (!select(client, state, axeSlot(player))) { finish(client, state, "Axe missing: combo stopped"); return; }
             if (!charged(player, state)) { state.status = "Charging axe"; return; }
@@ -391,7 +393,9 @@ public final class CombatAssistModule {
         boolean supported = target instanceof Enemy || state.feature == Feature.STUNSLAM
                 && target instanceof Player other && !other.isSpectator() && !other.isCreative();
         return supported && target instanceof LivingEntity living && target != player
-                && living.isAlive() && !target.isRemoved() && !player.isAlliedTo(target);
+                && living.isAlive() && !target.isRemoved()
+                && (state.feature == Feature.STUNSLAM && target instanceof Player other
+                    ? player.canHarmPlayer(other) : !player.isAlliedTo(target));
     }
     private static boolean inReach(LocalPlayer player, LivingEntity target, State state) {
         return eligible(player, target, state) && visibleInReach(player, target);
@@ -452,6 +456,10 @@ public final class CombatAssistModule {
         if (state.ownedSlot >= 0 && client.player.getInventory().getSelectedSlot() != state.ownedSlot)
             cancel(client, state);
         if (state.queued) return inReach(client.player, (LivingEntity) target, state);
+        if (!((LivingEntity) target).isBlocking()) {
+            state.status = "Click a raised shield to start";
+            return false;
+        }
         int axe = axeSlot(client.player);
         if (axe < 0 || maceSlot(client.player) < 0) {
             state.status = "Put an axe and mace in your hotbar";
