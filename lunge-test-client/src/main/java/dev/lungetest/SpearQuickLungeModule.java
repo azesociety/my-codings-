@@ -54,7 +54,6 @@ public final class SpearQuickLungeModule {
             if (client.player != requestedPlayer || client.level != requestedLevel || client.getConnection() != requestedConnection) cancel();
             requestedPlayer = client.player; requestedLevel = client.level; requestedConnection = client.getConnection();
             pendingPresses = Math.min(16, pendingPresses + 1);
-            if (client.isSameThread()) tick(client);
         }
         return ready(client) && (action == GLFW.GLFW_PRESS || action == GLFW.GLFW_REPEAT);
     }
@@ -113,7 +112,7 @@ public final class SpearQuickLungeModule {
                 if (client.player == player && client.getConnection() == connection && client.gameMode != null
                         && player.getInventory().getSelectedSlot() == slot) {
                     player.getInventory().setSelectedSlot(originalSlot);
-                    ((HotbarSyncAccess) client.gameMode).azeium$syncCarriedItem();
+                    if (VanillaInputPhase.active()) ((HotbarSyncAccess) client.gameMode).azeium$syncCarriedItem();
                 }
             };
             if (LungeTestClient.legitMode()) VisibleSwapReturn.defer("spear", restore, LungeTestClient.spearReturnTicks());

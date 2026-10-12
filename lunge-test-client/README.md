@@ -1,4 +1,4 @@
-# aze's hub 2.5.4
+# aze's hub 2.5.5
 
 Auto StunSlam offers **Click shield** and **Look at shield** triggers, with
 saved mace/repeat delays from **0–10 ticks**. Zero sends the axe and mace attacks
@@ -118,7 +118,7 @@ validation covers the reproduced library failure and an isolated Fabric client.
 
 Remove previous Spear Controls, Lunge Test Controls, Spear Test Lab, Spear Sprint
 and combined test JARs, including previous aze's hub versions. Put
-`azes-hub-2.5.4-mc1.21.11.jar` in your Minecraft
+`azes-hub-2.5.5-mc1.21.11.jar` in your Minecraft
 instance's `mods` folder alongside Fabric API. This is a client mod, not a Paper
 plugin. EntityCulling is not included or required.
 
@@ -458,8 +458,7 @@ configured client-tick callbacks. Looking alone never attacks in Click mode.
 Normal axe/mace attacks are allowed during Elytra flight. Vanilla falling Smash
 conditions and server damage/immunity rules are not changed.
 
-The **Spear** shortcut now acts immediately on a deliberate key or mouse-button
-press on Minecraft's main thread, rather than waiting for END tick. Its saved
+The **Spear** shortcut queues a deliberate key or mouse-button press into Minecraft's normal input phase, before player movement and client tick end. Its saved
 **Return delay** cycles **0–10 ticks** in Legit mode; default **0** selects the
 spear, sends one ordinary jab and restores the original slot during that same
 input event. A positive delay briefly shows the selected spear before returning.
@@ -469,3 +468,22 @@ Legit mode honors zero Stun Slam delay instead of forcing a four-tick axe hold.
 At zero, axe and mace selections occur in the same tick, so the axe cannot appear
 in a separate rendered frame. The mace still uses Legit mode's visible return.
 Choose a positive mace delay to see the axe phase.
+
+## Lunge packet-order correction (2.5.5)
+
+A spear shortcut key/mouse press now queues the action until Minecraft's normal
+`handleKeybinds` phase. The actual select → STAB → return packets are sent before
+player movement and client tick end. Visible returns are also processed in that
+input phase. This removes the out-of-phase shortcut dispatch that could interact
+with Grim's Post check. Outside input processing, a cancelled spear return
+changes local selection and lets normal game-mode synchronization deliver it.
+
+This replaces 2.5.4's immediate native input dispatch. It can add up to one client
+tick of waiting, while Return delay 0 still selects, jabs and returns within the
+same input phase. No movement packet is fabricated for this correction.
+
+Validation captures the actual transformed Minecraft input method and its
+select/STAB/return sequence before controlled movement/tick-end markers. The
+uploaded Grim 2.3.74 Post logic was examined statically. These checks are not a
+joined-server test, and do not guarantee silence from every Grim check or from
+other enabled automation. Verify the lunge shortcut independently on your server.

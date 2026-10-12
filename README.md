@@ -1,8 +1,8 @@
-# aze's hub 2.5.4
+# aze's hub 2.5.5
 
 Minecraft Java 1.21.11 · Fabric Loader 0.19.3+ · Java 21 · Fabric API.
 
-- [Download JAR](https://github.com/azesociety/my-codings-/raw/refs/heads/main/azes-hub-2.5.4-mc1.21.11.jar)
+- [Download JAR](https://github.com/azesociety/my-codings-/raw/refs/heads/main/azes-hub-2.5.5-mc1.21.11.jar)
 - [Source](lunge-test-client/)
 - [Full controls and build instructions](lunge-test-client/README.md)
 
@@ -13,9 +13,9 @@ Mace delay and repeat delay both support **0–10 ticks**. Zero sends axe then m
 in the same client tick. Normal attacks also work during Elytra flight.
 Weapons may be in your hotbar or main inventory; close other containers first.
 
-**Spear:** the shortcut acts on the deliberate key/mouse press. In Legit mode,
-**Return delay: 0** selects the spear, jabs and returns during that same input
-event; choose 1–10 ticks to show the selected spear briefly. Hold repeats do not
+**Spear:** the shortcut queues a deliberate key/mouse press for vanilla input processing. In Legit mode,
+**Return delay: 0** selects the spear, jabs and returns during that same vanilla input
+phase; choose 1–10 ticks to show the selected spear briefly. Hold repeats do not
 attack. Forward movement still requires Lunge enchantment and vanilla conditions.
 
 **Legit mode** is in Client settings. At 0 Stun Slam delay the axe cannot appear
@@ -27,3 +27,22 @@ guarantee extra damage or shield disables; Elytra flight does not automatically
 qualify a mace hit as a vanilla Smash.
 
 Build with Java 21: `gradlew.bat build` or `./gradlew build` in `lunge-test-client`.
+
+## Lunge packet-order correction (2.5.5)
+
+A spear shortcut key/mouse press now queues the action until Minecraft's normal
+`handleKeybinds` phase. The actual select → STAB → return packets are sent before
+player movement and client tick end. Visible returns are also processed in that
+input phase. This removes the out-of-phase shortcut dispatch that could interact
+with Grim's Post check. Outside input processing, a cancelled spear return
+changes local selection and lets normal game-mode synchronization deliver it.
+
+This replaces 2.5.4's immediate native input dispatch. It can add up to one client
+tick of waiting, while Return delay 0 still selects, jabs and returns within the
+same input phase. No movement packet is fabricated for this correction.
+
+Validation captures the actual transformed Minecraft input method and its
+select/STAB/return sequence before controlled movement/tick-end markers. The
+uploaded Grim 2.3.74 Post logic was examined statically. These checks are not a
+joined-server test, and do not guarantee silence from every Grim check or from
+other enabled automation. Verify the lunge shortcut independently on your server.

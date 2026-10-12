@@ -16,6 +16,14 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(Minecraft.class)
 public abstract class ManualAttackMixin implements SpearAttackAccess, dev.lungetest.ClickActionAccess {
     @org.spongepowered.asm.mixin.Shadow private int missTime;
+    @Inject(method = "handleKeybinds", at = @At("HEAD"))
+    private void azeium$beforeVanillaInput(org.spongepowered.asm.mixin.injection.callback.CallbackInfo info) {
+        dev.lungetest.VanillaInputPhase.beforeInput((Minecraft) (Object) this);
+    }
+    @Inject(method = "handleKeybinds", at = @At("TAIL"))
+    private void azeium$afterVanillaInput(org.spongepowered.asm.mixin.injection.callback.CallbackInfo info) {
+        dev.lungetest.VanillaInputPhase.afterInput((Minecraft) (Object) this);
+    }
     @Invoker("startAttack") public abstract boolean azeium$startAttack();
     @Invoker("startUseItem") public abstract void azeium$startUseItem();
     @Inject(method = "startAttack", at = @At("HEAD"), cancellable = true)
