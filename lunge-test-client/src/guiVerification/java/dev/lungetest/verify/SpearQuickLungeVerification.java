@@ -89,7 +89,7 @@ public final class SpearQuickLungeVerification {
             connection.packets.clear(); player.lunges = 0;
             LungeTestClient.toggle(client);
             key(client, GLFW.GLFW_KEY_F18, GLFW.GLFW_PRESS);
-            require(connection.packets.isEmpty(), "Input queues action without preemptive packets");
+            require(stabs(connection) == 1, "Input dispatches the spear action immediately");
             SpearQuickLungeModule.tick(client);
             require(stabs(connection) == 1 && player.inventory.getSelectedSlot() == 0, "One press jabs once and restores original sword");
             require(connection.packets.size() == 3 && connection.packets.get(0) instanceof ServerboundSetCarriedItemPacket a && a.getSlot() == 3
@@ -128,11 +128,11 @@ public final class SpearQuickLungeVerification {
                 player.alive = true; player.using = false; player.spectator = false;
                 player.inventory.setItem(3, new ItemStack(Items.DIAMOND_SPEAR)); player.cooldowns = new ItemCooldowns();
             }
-            key(client, GLFW.GLFW_KEY_F18, GLFW.GLFW_PRESS); client.screen = new TitleScreen(); SpearQuickLungeModule.tick(client); client.screen = null;
+            client.setScreen(new TitleScreen()); key(client, GLFW.GLFW_KEY_F18, GLFW.GLFW_PRESS); SpearQuickLungeModule.tick(client); client.setScreen(null);
             require(stabs(connection) == before, "Opening a menu cancels queued action");
-            key(client, GLFW.GLFW_KEY_F18, GLFW.GLFW_PRESS); var savedLevel = client.level; client.level = null; SpearQuickLungeModule.tick(client); client.level = savedLevel;
+            var savedLevel = client.level; client.level = null; key(client, GLFW.GLFW_KEY_F18, GLFW.GLFW_PRESS); SpearQuickLungeModule.tick(client); client.level = savedLevel;
             require(stabs(connection) == before, "Disconnect cancels queued action without slot changes");
-            key(client, GLFW.GLFW_KEY_F18, GLFW.GLFW_PRESS); field(Minecraft.class, "missTime").setInt(client, 5); SpearQuickLungeModule.tick(client);
+            field(Minecraft.class, "missTime").setInt(client, 5); key(client, GLFW.GLFW_KEY_F18, GLFW.GLFW_PRESS); SpearQuickLungeModule.tick(client);
             require(stabs(connection) == before && player.inventory.getSelectedSlot() == 0, "A vanilla-blocked jab still restores the original slot");
             field(Minecraft.class, "missTime").setInt(client, 0);
             SpearQuickLungeModule.initialize(GLFW.GLFW_KEY_F18, 5);
@@ -166,6 +166,8 @@ public final class SpearQuickLungeVerification {
             client.setScreen(new LungeTestScreen()); var clearMenu = (LungeTestScreen) client.screen;
             button(clearMenu, "Quick-lunge key: ").onPress(new KeyEvent(GLFW.GLFW_KEY_ENTER, 0, 0)); key(client, GLFW.GLFW_KEY_DELETE, GLFW.GLFW_PRESS);
             require(SpearQuickLungeModule.key() == GLFW.GLFW_KEY_UNKNOWN && !clearMenu.capturingKeybind(), "Delete clears spear action key through real GUI capture");
+            int oldReturn = LungeTestClient.spearReturnTicks();
+            LungeTestClient.setSpearReturnTicks(4);
             boolean previousLegit = LungeTestClient.legitMode();
             if (!previousLegit) LungeTestClient.toggleLegitMode();
             try {
@@ -175,15 +177,22 @@ public final class SpearQuickLungeVerification {
                 field(Minecraft.class, "missTime").setInt(client, 0);
                 long visibleBefore = stabs(connection);
                 mouseHandler.invoke(client.mouseHandler, client.getWindow().handle(), mouseButton, GLFW.GLFW_PRESS);
+                require(stabs(connection) == visibleBefore + 1, "Spear shortcut dispatches during the actual mouse press without waiting for END tick");
                 SpearQuickLungeModule.tick(client);
                 require(stabs(connection) == visibleBefore + 1 && LungeTestClient.isSpear(player.getMainHandItem()), "Legit spear shortcut visibly selects the actual spear after its jab");
                 for (int i = 0; i < 3; i++) dev.lungetest.VisibleSwapReturn.tick(client);
                 require(LungeTestClient.isSpear(player.getMainHandItem()), "Legit spear selection remains visible for three intervening ticks");
                 dev.lungetest.VisibleSwapReturn.tick(client);
                 require(player.inventory.getSelectedSlot() == 0, "Legit spear shortcut returns the original slot after four ticks");
+                LungeTestClient.setSpearReturnTicks(0);
+                mouseHandler.invoke(client.mouseHandler, client.getWindow().handle(), mouseButton, GLFW.GLFW_PRESS);
+                require(stabs(connection) == visibleBefore + 2 && player.inventory.getSelectedSlot() == 0
+                                && !dev.lungetest.VisibleSwapReturn.pending("spear"),
+                        "Zero-tick spear return selects, stabs and restores during the same input event even with Legit mode ON");
             } finally {
                 dev.lungetest.VisibleSwapReturn.finishNow();
                 if (LungeTestClient.legitMode() != previousLegit) LungeTestClient.toggleLegitMode();
+                LungeTestClient.setSpearReturnTicks(oldReturn);
             }
             LungeTestClient.LOG.info("QUICK_LUNGE_VERIFIED: {} checks; transformed input/attack, one STAB per press, ordinary select-STAB-return order, empty hand/selected spear, slot preference, conflicts and cancellation guards; no network transport", checks);
         } catch (ReflectiveOperationException e) { throw new AssertionError("Spear shortcut verification failed", e); }

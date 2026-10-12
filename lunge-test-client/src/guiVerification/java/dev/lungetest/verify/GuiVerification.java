@@ -618,6 +618,8 @@ public final class GuiVerification implements ClientModInitializer {
                         dev.lungetest.AutoStunSlamModule.preferences()), dev.lungetest.AutoStunSlamModule.Preferences.class);
                 button(screen, dev.lungetest.AutoStunSlamModule.delayLabel()).onPress(key);
                 require(dev.lungetest.AutoStunSlamModule.preferences().followUpTicks != old.followUpTicks, "Actual Stun Slam delay control changes ticks");
+                button(screen, dev.lungetest.AutoStunSlamModule.triggerLabel()).onPress(key);
+                require(dev.lungetest.AutoStunSlamModule.preferences().trigger != old.trigger, "Actual Stun Slam trigger control switches click/look mode");
                 button(screen, dev.lungetest.AutoStunSlamModule.retryLabel()).onPress(key);
                 require(dev.lungetest.AutoStunSlamModule.preferences().retriggerTicks != old.retriggerTicks, "Actual Stun Slam repeat control changes ticks");
                 dev.lungetest.AutoStunSlamModule.initialize(old); LungeTestClient.saveStunPreferences();

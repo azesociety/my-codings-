@@ -102,10 +102,13 @@ public final class LungeTestScreen extends AzeiumScreen {
                 spearKey = addButton(x, settings, w, 20, spearKeyLabel(), b -> {
                     cancelCapture(); captureSpear = true; refreshButtons();
                 });
-                spearKey.setTooltip(hint("Separate action key: selects a hotbar spear, sends one normal jab and restores your previous slot. Enable Spear first. Lunge movement needs the real Lunge enchantment and vanilla conditions. Hold repeats do not attack."));
+                spearKey.setTooltip(hint("Separate action key: selects a hotbar spear, sends one normal jab and restores your previous slot. Lunge movement needs the real Lunge enchantment and vanilla conditions. Hold repeats do not attack."));
                 spearSlot = addButton(x, settings + 24, w, 18, "Spear slot: " + SpearQuickLungeModule.slotLabel(), b -> {
                     SpearQuickLungeModule.cycleSlot(); refreshButtons();
                 });
+                addButton(x, settings + 48, w, 18, LungeTestClient.spearReturnLabel(), b -> {
+                    LungeTestClient.setSpearReturnTicks((LungeTestClient.spearReturnTicks() + 1) % 11); selectModule(selected);
+                }).setTooltip(hint("Legit mode return delay: 0–10 ticks. 0 selects, jabs and returns immediately. The initial spear selection happens on the key press."));
             }
             case SPEAROMETER -> {
                 mode = addButton(x, settings, w, 18, modeLabel(), b -> {
@@ -155,6 +158,7 @@ public final class LungeTestScreen extends AzeiumScreen {
             case AUTO_STUNSLAM -> {
                 addButton(x, settings, w, 18, AutoStunSlamModule.delayLabel(), b -> { AutoStunSlamModule.cycleDelay(); selectModule(selected); });
                 addButton(x, settings + 23, w, 18, AutoStunSlamModule.retryLabel(), b -> { AutoStunSlamModule.cycleRetry(); selectModule(selected); });
+                addButton(x, settings + 46, w, 18, AutoStunSlamModule.triggerLabel(), b -> { AutoStunSlamModule.cycleTrigger(); selectModule(selected); });
             }
             case AUTO_CLICKER -> {
                 addButton(x, settings, w, 18, AutoClickerModule.modeLabel(), b -> { AutoClickerModule.cycleMode(); selectModule(selected); });
@@ -465,12 +469,12 @@ public final class LungeTestScreen extends AzeiumScreen {
 
         switch (selected) {
             case SPEAR -> {
-                text(g, SpearQuickLungeModule.status(), x, settings + 51, ACCENT, contentWidth);
+                text(g, SpearQuickLungeModule.status(), x, settings + 72, ACCENT, contentWidth);
                 if (!compact()) {
-                    text(g, "Manual clicks keep their current behavior.", x, settings + 73, MUTED, contentWidth);
+                    text(g, "Manual clicks keep their current behavior.", x, settings + 95, MUTED, contentWidth);
                     var stats = LungeTestClient.stats();
-                    text(g, "Clicks / starts: " + stats.attempts() + " / " + stats.started(), x, settings + 95, TEXT, contentWidth);
-                    text(g, LungeTestClient.activity(minecraft), x, settings + 113, MUTED, contentWidth);
+                    text(g, "Clicks / starts: " + stats.attempts() + " / " + stats.started(), x, settings + 113, TEXT, contentWidth);
+
                 }
             }
             case SPEAROMETER -> {
@@ -558,9 +562,8 @@ public final class LungeTestScreen extends AzeiumScreen {
                 }
             }
             case AUTO_STUNSLAM -> {
-                text(g, AutoStunSlamModule.status(), x, settings + 50, ACCENT, contentWidth);
-                text(g, "Aim at a raised shield. Axe, then mace.", x, settings + 73, TEXT, contentWidth);
-                text(g, "Tools can be anywhere in your inventory.", x, settings + 96, MUTED, contentWidth);
+                text(g, AutoStunSlamModule.status(), x, settings + 77, ACCENT, contentWidth);
+                if (!compact()) text(g, "Raised shield required. Axe, then mace.", x, settings + 99, TEXT, contentWidth);
 
             }
             case AUTO_MACE -> {

@@ -9,10 +9,12 @@ public final class VisibleSwapReturn {
     private static int ticksLeft;
     private VisibleSwapReturn() {}
     public static boolean pending(String key) { return restore != null && key.equals(owner); }
-    public static void defer(String key, Runnable action) {
+    public static void defer(String key, Runnable action) { defer(key, action, 4); }
+    public static void defer(String key, Runnable action, int ticks) {
+        if (ticks <= 0) { action.run(); return; }
         if (pending(key)) return;
         finishNow();
-        owner = key; restore = action; ticksLeft = 4;
+        owner = key; restore = action; ticksLeft = ticks;
     }
     public static void finishNow() {
         Runnable action = restore;

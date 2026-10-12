@@ -13,21 +13,26 @@ import net.minecraft.world.phys.EntityHitResult;
 
 /** Adapted from the user-supplied PrivateStunslamClient: crosshair axe, then mace. */
 public final class AutoStunSlamModule {
-    public static final class Preferences { public int followUpTicks = 1; public int retriggerTicks = 12; }
+    public enum Trigger { CLICK, LOOK }
+    public static final class Preferences { public int followUpTicks = 0; public int retriggerTicks = 0; public Trigger trigger = Trigger.CLICK; }
     private static Preferences prefs = new Preferences();
     public static void initialize(Preferences saved) {
         prefs = saved == null ? new Preferences() : saved;
-        prefs.followUpTicks = Math.clamp(prefs.followUpTicks, 1, 40);
-        prefs.retriggerTicks = Math.clamp(prefs.retriggerTicks, 1, 60);
+        if (prefs.trigger == null) prefs.trigger = Trigger.CLICK;
+        prefs.followUpTicks = Math.clamp(prefs.followUpTicks, 0, 10);
+        prefs.retriggerTicks = Math.clamp(prefs.retriggerTicks, 0, 10);
     }
     public static Preferences preferences() { return prefs; }
+    public static String triggerLabel() { return "Trigger: " + (prefs.trigger == Trigger.CLICK ? "Click shield" : "Look at shield"); }
+    public static void cycleTrigger() { prefs.trigger = prefs.trigger == Trigger.CLICK ? Trigger.LOOK : Trigger.CLICK; setEnabled(enabled); LungeTestClient.saveStunPreferences(); }
     public static String delayLabel() { return "Mace delay: " + prefs.followUpTicks + " ticks"; }
     public static String retryLabel() { return "Repeat delay: " + prefs.retriggerTicks + " ticks"; }
-    public static void cycleDelay() { prefs.followUpTicks = prefs.followUpTicks % 40 + 1; LungeTestClient.saveStunPreferences(); }
-    public static void cycleRetry() { prefs.retriggerTicks = prefs.retriggerTicks % 60 + 1; LungeTestClient.saveStunPreferences(); }
+    public static void cycleDelay() { prefs.followUpTicks = (prefs.followUpTicks + 1) % 11; LungeTestClient.saveStunPreferences(); }
+    public static void cycleRetry() { prefs.retriggerTicks = (prefs.retriggerTicks + 1) % 11; LungeTestClient.saveStunPreferences(); }
     private static final InventoryHotbarLease inventory = new InventoryHotbarLease();
     private static boolean enabled, dispatching;
-    private static LivingEntity pendingTarget;
+    private static LivingEntity pendingTarget, clickedTarget;
+    private static long sequences;
     private static int followUpIn, retriggerDelay;
     private static int originalSlot = -1, ownedSlot = -1;
     private static ClientLevel level;
@@ -44,9 +49,10 @@ public final class AutoStunSlamModule {
         enabled = value;
         retriggerDelay = 0;
         level = null; connection = null;
-        status = value ? "Aim at a raised shield" : "Disabled";
+        status = value ? "Click a raised shield" : "Disabled";
     }
-    public static void tick(Minecraft client) {
+    public static void tick(Minecraft client) { update(client, true); }
+    private static void update(Minecraft client, boolean advance) {
         inventory.tick(client);
         if (!enabled || VisibleSwapReturn.pending("stun")) return;
         if (client.player == null || client.level == null || client.gameMode == null || client.getConnection() == null
@@ -56,7 +62,7 @@ public final class AutoStunSlamModule {
         if (level == null) { level = client.level; connection = client.getConnection(); }
         if (client.screen != null || client.isPaused() || !client.isWindowActive() || client.player.isUsingItem()
                 || client.player.isSpectator() || client.player.isCreative() || client.player.getAbilities().flying
-                || client.player.isFallFlying() || client.player.isPassenger() || client.player.isInWater()
+                || client.player.isPassenger() || client.player.isInWater()
                 || client.player.isInLava() || client.player.onClimbable() || AutoClutchModule.actedThisTick()
                 || TellyPilotModule.active()) {
             cancel(client); status = "Paused: screen, movement or another action"; return;
@@ -70,7 +76,8 @@ public final class AutoStunSlamModule {
                 cancel(client); retriggerDelay = prefs.retriggerTicks;
                 status = "Cancelled: target died, left reach or moved behind a wall"; return;
             }
-            if (--followUpIn > 0) return;
+            if (advance) followUpIn--;
+            if (followUpIn > 0) return;
             LivingEntity target = pendingTarget;
             int mace = find(client, false);
             if (mace >= 0 && valid(client, target) && selectAndCheck(client, mace, target)) {
@@ -82,20 +89,23 @@ public final class AutoStunSlamModule {
             retriggerDelay = prefs.retriggerTicks;
             return;
         }
-        if (retriggerDelay > 0) { retriggerDelay--; return; }
-        if (!(client.hitResult instanceof EntityHitResult hit) || !(hit.getEntity() instanceof LivingEntity target)
-                || !valid(client, target) || !target.isBlocking()) {
-            status = "Aim at a raised shield"; return;
+        if (retriggerDelay > 0) { if (advance) retriggerDelay--; return; }
+        LivingEntity target = clickedTarget;
+        clickedTarget = null;
+        if (target == null && advance && prefs.trigger == Trigger.LOOK
+                && client.hitResult instanceof EntityHitResult hit && hit.getEntity() instanceof LivingEntity looked) target = looked;
+        if (!valid(client, target) || !target.isBlocking()) {
+            status = "Click a raised shield"; return;
         }
         // Check ordinary axe reach before borrowing anything from the inventory.
         if (!client.player.hasLineOfSight(target) || !client.player.isWithinEntityInteractionRange(target.getBoundingBox(), 0)) {
             status = "Move within axe reach and sight"; return;
         }
+        VisibleSwapReturn.finishNow();
         if (!inventory.ensure(client, stack -> stack.getItem() instanceof AxeItem || stack.is(ItemTags.AXES),
                 stack -> stack.is(Items.MACE))) {
             status = "Need axe + mace in inventory; close other containers"; return;
         }
-        VisibleSwapReturn.finishNow();
         originalSlot = client.player.getInventory().getSelectedSlot();
         int axe = find(client, true);
         if (axe < 0 || !selectAndCheck(client, axe, target)) {
@@ -103,8 +113,23 @@ public final class AutoStunSlamModule {
         }
         attack(client, target);
         pendingTarget = target;
-        followUpIn = LungeTestClient.legitMode() ? Math.max(4, prefs.followUpTicks) : prefs.followUpTicks;
+        followUpIn = prefs.followUpTicks;
+        sequences++;
         status = "Axe hit sent; mace in " + followUpIn + " ticks";
+        if (followUpIn == 0) update(client, false);
+    }
+    public static boolean beginShieldHit(Minecraft client, net.minecraft.world.entity.Entity entity) {
+        if (!enabled || dispatching || prefs.trigger != Trigger.CLICK || !(entity instanceof LivingEntity target) || !target.isBlocking()) return false;
+        if (pendingTarget != null || VisibleSwapReturn.pending("stun")) {
+            boolean manualSmash = client.player != null && CombatAssistModule.enabled(CombatAssistModule.Feature.MACE)
+                    && !client.player.onGround() && client.player.getDeltaMovement().y < 0
+                    && net.minecraft.world.item.MaceItem.canSmashAttack(client.player);
+            return !manualSmash;
+        }
+        clickedTarget = target;
+        long before = sequences;
+        try { update(client, false); return sequences != before; }
+        finally { clickedTarget = null; }
     }
     public static void yieldForManualAttack(Minecraft client) {
         if (!busy() || dispatching) return;

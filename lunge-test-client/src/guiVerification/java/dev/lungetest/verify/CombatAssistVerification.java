@@ -1199,85 +1199,83 @@ public final class CombatAssistVerification {
             require(attacks(connection) == 0 && player.inventory.getItem(12).is(Items.DIAMOND_AXE)
                             && player.inventory.getItem(31).is(Items.MACE) && player.inventory.getSelectedSlot() == 0,
                     "Disabling before the axe hit returns inventory tools without sending an attack");
-            // The supplied add-on replaces the UI module with an automatic crosshair trigger.
-            connection.packets.clear(); target.blocking = false;
-            dev.lungetest.AutoStunSlamModule.setEnabled(true);
-            dev.lungetest.AutoStunSlamModule.tick(client);
-            require(attacks(connection) == 0, "Uploaded Stun Slam stays idle on a shield that is not raised");
-            target.blocking = true;
-            dev.lungetest.AutoStunSlamModule.tick(client);
-            require(attacks(connection) == 1 && player.lastAttackStack.is(Items.DIAMOND_AXE)
-                            && player.lastDisableSeconds > 0 && dev.lungetest.AutoStunSlamModule.busy(),
-                    "Uploaded Stun Slam automatically borrows the inventory axe and hits the raised shield without a click");
-            int borrowedAxe = player.inventory.getSelectedSlot();
-            require(hasSlotBeforeAttack(connection, borrowedAxe, 1), "Uploaded axe is synchronized before its ordinary attack packet");
-            target.blocking = false;
-            dev.lungetest.AutoStunSlamModule.tick(client);
-            require(attacks(connection) == 2 && player.lastAttackStack.is(Items.MACE) && player.inventory.getSelectedSlot() == 0,
-                    "Uploaded mace follow-up occurs on the next client tick even after the shield lowers, then returns the original slot");
-            require(player.inventory.getItem(12).is(Items.DIAMOND_AXE) && player.inventory.getItem(31).is(Items.MACE),
-                    "Uploaded sequence returns both inventory weapons after its follow-up");
-            target.blocking = true;
-            for (int i = 0; i < 12; i++) dev.lungetest.AutoStunSlamModule.tick(client);
-            require(attacks(connection) == 2, "Uploaded sequence respects its twelve-tick retrigger delay");
-            dev.lungetest.AutoStunSlamModule.tick(client);
-            require(attacks(connection) == 3, "Uploaded sequence can retrigger only after the delay while still aimed at a raised shield");
-            player.inventory.setSelectedSlot(6);
-            dev.lungetest.AutoStunSlamModule.tick(client);
-            require(attacks(connection) == 3 && player.inventory.getSelectedSlot() == 6,
-                    "Manual slot changes cancel the uploaded follow-up and preserve the player's choice");
-            dev.lungetest.AutoStunSlamModule.setEnabled(false); player.inventory.setSelectedSlot(0);
-            var team = new PlayerTeam(new Scoreboard(), "uploaded-allies"); team.setAllowFriendlyFire(false);
-            player.team = target.team = team; connection.packets.clear();
-            dev.lungetest.AutoStunSlamModule.setEnabled(true); dev.lungetest.AutoStunSlamModule.tick(client);
-            require(attacks(connection) == 0, "Uploaded sequence respects a team's disabled friendly fire");
-            player.team = target.team = null;
-            dev.lungetest.AutoStunSlamModule.tick(client);
-            client.screen = new net.minecraft.client.gui.screens.TitleScreen();
-            dev.lungetest.AutoStunSlamModule.tick(client); client.screen = null;
-            require(attacks(connection) == 1 && !dev.lungetest.AutoStunSlamModule.busy()
-                            && player.inventory.getSelectedSlot() == 0 && player.inventory.getItem(12).is(Items.DIAMOND_AXE),
-                    "Opening a screen cancels the uploaded sequence and returns borrowed items without a mace attack");
-            dev.lungetest.AutoStunSlamModule.setEnabled(false);
-            connection.packets.clear();
-            dev.lungetest.AutoStunSlamModule.setEnabled(true); dev.lungetest.AutoStunSlamModule.tick(client);
-            require(attacks(connection) == 1 && dev.lungetest.AutoStunSlamModule.busy(), "Manual takeover fixture starts with the uploaded automatic axe hit");
-            CombatAssistModule.setEnabled(MACE, true);
-            player.grounded = false; player.velocity = new Vec3(0, -.5, 0); player.fallDistance = 2.5;
-            set(Minecraft.class, client, "missTime", 0);
+            // Shield combos now require a deliberate hit; idle aim never attacks.
+            for (int delay : new int[]{0, 1, 10}) {
+                var timing = new dev.lungetest.AutoStunSlamModule.Preferences(); timing.followUpTicks = delay;
+                dev.lungetest.AutoStunSlamModule.initialize(timing);
+                dev.lungetest.AutoStunSlamModule.setEnabled(true); connection.packets.clear();
+                target.blocking = true; client.hitResult = new EntityHitResult(target);
+                for (int i = 0; i < 20; i++) dev.lungetest.AutoStunSlamModule.tick(client);
+                require(attacks(connection) == 0, "Aiming at a raised shield never activates click-triggered Stun Slam");
+                set(Minecraft.class, client, "missTime", 0);
+                ((dev.lungetest.SpearAttackAccess) client).azeium$startAttack();
+                require(attacks(connection) == (delay == 0 ? 2 : 1), "A real shield click starts the axe and honors delay=" + delay);
+                if (delay > 0) {
+                    require(player.lastAttackStack.is(Items.DIAMOND_AXE), "The initial shield hit uses the borrowed axe");
+                    for (int i = 1; i < delay; i++) dev.lungetest.AutoStunSlamModule.tick(client);
+                    require(attacks(connection) == 1, "The mace does not fire before the selected delay");
+                    dev.lungetest.AutoStunSlamModule.tick(client);
+                }
+                require(attacks(connection) == 2 && player.lastAttackStack.is(Items.MACE)
+                                && player.inventory.getSelectedSlot() == 0,
+                        "Selected delay finishes exactly one mace hit and returns the original slot");
+                require(player.inventory.getItem(12).is(Items.DIAMOND_AXE) && player.inventory.getItem(31).is(Items.MACE),
+                        "Click-triggered Stun Slam returns both inventory weapons");
+                for (int i = 0; i < 20; i++) dev.lungetest.AutoStunSlamModule.tick(client);
+                require(attacks(connection) == 2, "The combo never repeats automatically while the shield remains raised");
+                dev.lungetest.AutoStunSlamModule.setEnabled(false);
+            }
+            var timing = new dev.lungetest.AutoStunSlamModule.Preferences(); timing.followUpTicks = 10;
+            dev.lungetest.AutoStunSlamModule.initialize(timing); dev.lungetest.AutoStunSlamModule.setEnabled(true);
+            connection.packets.clear(); client.gameMode.attack(player, target);
+            require(attacks(connection) == 1 && player.lastAttackStack.is(Items.DIAMOND_AXE), "Direct game-mode shield clicks also trigger the axe-first combo");
+            target.alive = false; dev.lungetest.AutoStunSlamModule.tick(client);
+            require(attacks(connection) == 1 && !dev.lungetest.AutoStunSlamModule.busy() && player.inventory.getSelectedSlot() == 0,
+                    "Dead targets cancel a delayed shield follow-up and return weapons promptly");
+            target.alive = true; dev.lungetest.AutoStunSlamModule.setEnabled(false);
+            target.blocking = false; connection.packets.clear(); dev.lungetest.AutoStunSlamModule.setEnabled(true);
+            client.gameMode.attack(player, target);
+            require(attacks(connection) == 1 && player.lastAttackStack.is(Items.DIAMOND_SWORD), "Hitting an unused shield remains an ordinary hit with the original weapon");
+            dev.lungetest.AutoStunSlamModule.setEnabled(false); target.blocking = true;
+            dev.lungetest.AutoStunSlamModule.setEnabled(true); connection.packets.clear();
+            set(Minecraft.class, client, "missTime", 5);
             ((dev.lungetest.SpearAttackAccess) client).azeium$startAttack();
-            require(attacks(connection) == 2 && player.lastAttackStack.is(Items.MACE) && player.inventory.getSelectedSlot() == 0
-                            && !dev.lungetest.AutoStunSlamModule.busy(), "A deliberate falling click takes over a pending Stun Slam and lands one mace hit");
-            dev.lungetest.AutoStunSlamModule.tick(client);
-            require(attacks(connection) == 2, "The cancelled automatic follow-up does not duplicate the manual mace hit");
+            require(attacks(connection) == 0, "Vanilla-blocked clicks cannot trigger the shield combo");
+            set(Minecraft.class, client, "missTime", 0); dev.lungetest.AutoStunSlamModule.setEnabled(false);
+            boolean oldLegit = LungeTestClient.legitMode(); if (!oldLegit) LungeTestClient.toggleLegitMode();
+            try {
+                timing.followUpTicks = 0; dev.lungetest.AutoStunSlamModule.initialize(timing);
+                dev.lungetest.AutoStunSlamModule.setEnabled(true); connection.packets.clear();
+                client.gameMode.attack(player, target);
+                require(attacks(connection) == 2 && player.getMainHandItem().is(Items.MACE), "Zero ticks is honored in Legit mode while the mace remains visibly selected");
+                for (int i = 0; i < 4; i++) dev.lungetest.VisibleSwapReturn.tick(client);
+                require(player.inventory.getSelectedSlot() == 0, "Legit mode returns the original slot after the zero-tick combo");
+                dev.lungetest.AutoStunSlamModule.setEnabled(false);
+            } finally { dev.lungetest.VisibleSwapReturn.finishNow(); if (LungeTestClient.legitMode() != oldLegit) LungeTestClient.toggleLegitMode(); }
+            timing.followUpTicks = 0; timing.retriggerTicks = 0; timing.trigger = dev.lungetest.AutoStunSlamModule.Trigger.LOOK;
+            dev.lungetest.AutoStunSlamModule.initialize(timing); dev.lungetest.AutoStunSlamModule.setEnabled(true);
+            connection.packets.clear(); dev.lungetest.AutoStunSlamModule.tick(client);
+            require(attacks(connection) == 2, "Look mode triggers the zero-tick shield sequence without a manual click");
+            dev.lungetest.AutoStunSlamModule.setEnabled(false); timing.trigger = dev.lungetest.AutoStunSlamModule.Trigger.CLICK;
+            dev.lungetest.AutoStunSlamModule.initialize(timing); dev.lungetest.AutoStunSlamModule.setEnabled(true);
+            connection.packets.clear(); player.flying = true; player.grounded = false; player.velocity = new Vec3(0, -.1, .2);
+            client.gameMode.attack(player, target);
+            require(attacks(connection) == 2 && player.lastAttackStack.is(Items.MACE) && player.inventory.getSelectedSlot() == 0,
+                    "Click-triggered Stun Slam permits normal axe and mace hits during Elytra flight");
+            player.flying = false; player.grounded = true; player.velocity = Vec3.ZERO;
+            dev.lungetest.AutoStunSlamModule.setEnabled(false);
+            timing.followUpTicks = -1; timing.retriggerTicks = 50; dev.lungetest.AutoStunSlamModule.initialize(timing);
+            require(timing.followUpTicks == 0 && timing.retriggerTicks == 10, "Saved timing is clamped to the supported zero-to-ten range");
+            dev.lungetest.AutoStunSlamModule.initialize(new dev.lungetest.AutoStunSlamModule.Preferences());
+            timing.followUpTicks = 10; timing.retriggerTicks = 0; timing.trigger = dev.lungetest.AutoStunSlamModule.Trigger.CLICK;
+            dev.lungetest.AutoStunSlamModule.initialize(timing); dev.lungetest.AutoStunSlamModule.setEnabled(true);
+            connection.packets.clear(); client.gameMode.attack(player, target);
+            CombatAssistModule.setEnabled(MACE, true); player.grounded = false; player.velocity = new Vec3(0, -.5, 0); player.fallDistance = 2.5;
+            ((dev.lungetest.SpearAttackAccess) client).azeium$startAttack();
+            require(attacks(connection) == 2 && player.lastAttackStack.is(Items.MACE) && !dev.lungetest.AutoStunSlamModule.busy(),
+                    "Manual Auto Mace can still take over a pending click-triggered shield combo without triggering another axe hit");
             CombatAssistModule.setEnabled(MACE, false); dev.lungetest.AutoStunSlamModule.setEnabled(false);
             player.grounded = true; player.velocity = Vec3.ZERO; player.fallDistance = 0;
-            var timing = new dev.lungetest.AutoStunSlamModule.Preferences();
-            timing.followUpTicks = 5; timing.retriggerTicks = 20;
-            dev.lungetest.AutoStunSlamModule.initialize(timing);
-            connection.packets.clear(); dev.lungetest.AutoStunSlamModule.setEnabled(true);
-            dev.lungetest.AutoStunSlamModule.tick(client);
-            for (int i = 0; i < 4; i++) dev.lungetest.AutoStunSlamModule.tick(client);
-            require(attacks(connection) == 1, "Custom five-tick delay holds the mace follow-up for four intervening ticks");
-            dev.lungetest.AutoStunSlamModule.tick(client);
-            require(attacks(connection) == 2, "Custom mace delay dispatches on its fifth tick");
-            for (int i = 0; i < 20; i++) dev.lungetest.AutoStunSlamModule.tick(client);
-            require(attacks(connection) == 2, "Custom twenty-tick retrigger delay prevents an early combo");
-            dev.lungetest.AutoStunSlamModule.tick(client);
-            require(attacks(connection) == 3, "Custom repeat delay permits the next combo afterward");
-            dev.lungetest.AutoStunSlamModule.setEnabled(false);
-            dev.lungetest.AutoStunSlamModule.setEnabled(true); connection.packets.clear();
-            dev.lungetest.AutoStunSlamModule.tick(client); target.alive = false;
-            dev.lungetest.AutoStunSlamModule.tick(client);
-            require(attacks(connection) == 1 && !dev.lungetest.AutoStunSlamModule.busy() && player.inventory.getSelectedSlot() == 0,
-                    "A dead target releases the five-tick pending combo immediately instead of blocking other weapon swaps");
-            target.alive = true; dev.lungetest.AutoStunSlamModule.setEnabled(false);
-            locate(target, new Vec3(.5, 3, 4.5)); connection.packets.clear();
-            dev.lungetest.AutoStunSlamModule.setEnabled(true);
-            for (int i = 0; i < 10; i++) dev.lungetest.AutoStunSlamModule.tick(client);
-            require(connection.packets.isEmpty(), "Out-of-axe-reach shields do not repeatedly borrow inventory tools or send selection packets");
-            locate(target, new Vec3(.5, 3, 2.5)); dev.lungetest.AutoStunSlamModule.setEnabled(false);
-            dev.lungetest.AutoStunSlamModule.initialize(new dev.lungetest.AutoStunSlamModule.Preferences());
             var settingsField = LungeTestClient.class.getDeclaredField("settings"); settingsField.setAccessible(true);
             var settingsObject = settingsField.get(null);
             var togglesField = settingsObject.getClass().getDeclaredField("moduleToggles"); togglesField.setAccessible(true);
@@ -1299,37 +1297,6 @@ public final class CombatAssistVerification {
                 require(!dev.lungetest.AutoStunSlamModule.enabled(), "Disable all saves OFF so another join does not re-enable modules");
             } catch (InstantiationException error) { throw new AssertionError(error); }
             finally { client.level = previousLevel; togglesField.set(settingsObject, previousToggles); dev.lungetest.AutoStunSlamModule.setEnabled(false); }
-            boolean previousLegit = LungeTestClient.legitMode();
-            if (!previousLegit) LungeTestClient.toggleLegitMode();
-            try {
-                connection.packets.clear(); target.blocking = true; player.inventory.setSelectedSlot(0);
-                dev.lungetest.AutoStunSlamModule.setEnabled(true); dev.lungetest.AutoStunSlamModule.tick(client);
-                require(attacks(connection) == 1 && player.getMainHandItem().is(Items.DIAMOND_AXE), "Legit Stun Slam shows the actual axe slot");
-                for (int i = 0; i < 3; i++) { dev.lungetest.VisibleSwapReturn.tick(client); dev.lungetest.AutoStunSlamModule.tick(client); }
-                require(attacks(connection) == 1 && player.getMainHandItem().is(Items.DIAMOND_AXE), "Legit axe remains visible instead of changing in the same rendered tick");
-                dev.lungetest.VisibleSwapReturn.tick(client); dev.lungetest.AutoStunSlamModule.tick(client);
-                require(attacks(connection) == 2 && player.getMainHandItem().is(Items.MACE), "Legit Stun Slam shows the actual mace after its hit");
-                for (int i = 0; i < 3; i++) dev.lungetest.VisibleSwapReturn.tick(client);
-                require(player.getMainHandItem().is(Items.MACE), "Legit mace stays visible for three intervening ticks");
-                dev.lungetest.VisibleSwapReturn.tick(client);
-                require(player.inventory.getSelectedSlot() == 0 && player.inventory.getItem(12).is(Items.DIAMOND_AXE)
-                                && player.inventory.getItem(31).is(Items.MACE), "Legit Stun Slam restores the original slot and both borrowed inventory tools");
-                dev.lungetest.AutoStunSlamModule.setEnabled(false);
-                CombatAssistModule.setEnabled(MACE, true); player.grounded = false; player.velocity = new Vec3(0, -.5, 0); player.fallDistance = 2.5;
-                connection.packets.clear(); client.gameMode.attack(player, target);
-                require(attacks(connection) == 1 && player.getMainHandItem().is(Items.MACE), "Legit Auto Mace keeps the real mace selected after the same-click hit");
-                for (int i = 0; i < 4; i++) dev.lungetest.VisibleSwapReturn.tick(client);
-                require(player.inventory.getSelectedSlot() == 0 && player.inventory.getItem(31).is(Items.MACE), "Legit Auto Mace returns the original slot and inventory mace");
-                client.gameMode.attack(player, target); player.inventory.setSelectedSlot(5);
-                for (int i = 0; i < 4; i++) dev.lungetest.VisibleSwapReturn.tick(client);
-                require(player.inventory.getSelectedSlot() == 5, "Delayed return preserves a manual hotbar change");
-                CombatAssistModule.setEnabled(MACE, false); player.inventory.setSelectedSlot(0);
-                player.grounded = true; player.velocity = Vec3.ZERO; player.fallDistance = 0;
-            } finally {
-                dev.lungetest.VisibleSwapReturn.finishNow();
-                if (LungeTestClient.legitMode() != previousLegit) LungeTestClient.toggleLegitMode();
-                CombatAssistModule.setEnabled(MACE, false);
-            }
         } finally {
             dev.lungetest.AutoStunSlamModule.setEnabled(false);
             CombatAssistModule.setEnabled(SLAM, false);

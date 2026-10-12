@@ -54,6 +54,7 @@ public final class SpearQuickLungeModule {
             if (client.player != requestedPlayer || client.level != requestedLevel || client.getConnection() != requestedConnection) cancel();
             requestedPlayer = client.player; requestedLevel = client.level; requestedConnection = client.getConnection();
             pendingPresses = Math.min(16, pendingPresses + 1);
+            if (client.isSameThread()) tick(client);
         }
         return ready(client) && (action == GLFW.GLFW_PRESS || action == GLFW.GLFW_REPEAT);
     }
@@ -102,7 +103,9 @@ public final class SpearQuickLungeModule {
         dispatching = true;
         try {
             boolean started = ((SpearAttackAccess) client).azeium$startAttack();
-            status = started ? "Spear jab sent; slot restored" : "Vanilla attack was unavailable";
+            status = started ? LungeTestClient.legitMode() && LungeTestClient.spearReturnTicks() > 0
+                    ? "Spear jab sent; visible return in " + LungeTestClient.spearReturnTicks() + " ticks"
+                    : "Spear jab sent; slot restored" : "Vanilla attack was unavailable";
             CombatTestLog.event("Spear", "quick_lunge", "slot=" + slot + ",return=" + originalSlot + ",started=" + started);
         } finally {
             dispatching = false;
@@ -113,7 +116,7 @@ public final class SpearQuickLungeModule {
                     ((HotbarSyncAccess) client.gameMode).azeium$syncCarriedItem();
                 }
             };
-            if (LungeTestClient.legitMode()) VisibleSwapReturn.defer("spear", restore);
+            if (LungeTestClient.legitMode()) VisibleSwapReturn.defer("spear", restore, LungeTestClient.spearReturnTicks());
             else restore.run();
         }
     }

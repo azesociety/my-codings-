@@ -121,7 +121,7 @@ public final class LungeTestClient implements ClientModInitializer {
                 (message, overlay) -> CombatTestLog.observation(message.getString()));
         net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents.CHAT.register(
                 (message, signed, sender, parameters, received) -> CombatTestLog.observation(message.getString()));
-        LOG.info("aze's hub 2.5.3 loaded; the menu key opens modules. Auto Telly can jump, turn and bridge automatically; saved module toggles resume in live worlds.");
+        LOG.info("aze's hub 2.5.4 loaded; the menu key opens modules. Auto Telly can jump, turn and bridge automatically; saved module toggles resume in live worlds.");
     }
 
     public static boolean isSpear(ItemStack stack) {
@@ -186,7 +186,7 @@ public final class LungeTestClient implements ClientModInitializer {
             var folder = FabricLoader.getInstance().getGameDir().resolve("logs/spearometer");
             Files.createDirectories(folder);
             var report = new JsonObject();
-            report.addProperty("modVersion", "2.5.3");
+            report.addProperty("modVersion", "2.5.4");
             report.addProperty("minecraftVersion", "1.21.11");
             report.addProperty("exportedAt", Instant.now().toString());
             report.addProperty("measurementSource", "client");
@@ -298,6 +298,9 @@ public final class LungeTestClient implements ClientModInitializer {
         for (var module : AzeiumModules.Module.values()) settings.moduleToggles.put(module.name(), module.enabled());
         saveSettings();
     }
+    public static int spearReturnTicks() { return Math.clamp(settings.spearReturnTicks, 0, 10); }
+    public static void setSpearReturnTicks(int ticks) { settings.spearReturnTicks = Math.clamp(ticks, 0, 10); saveSettings(); }
+    public static String spearReturnLabel() { return "Return delay: " + spearReturnTicks() + " ticks"; }
     public static boolean legitMode() { return settings.legitMode; }
     public static void toggleLegitMode() { settings.legitMode = !settings.legitMode; VisibleSwapReturn.finishNow(); saveSettings(); }
     public static String legitModeLabel() { return "Legit mode: " + (legitMode() ? "ON" : "OFF"); }
@@ -342,6 +345,7 @@ public final class LungeTestClient implements ClientModInitializer {
         int rejoinKey = -1;
         int quickLungeKey = -1;
         int spearSlot = -1;
+        int spearReturnTicks;
         int armorThreshold = 20;
         Map<String, Integer> moduleKeys = new LinkedHashMap<>();
         Map<String, CombatAssistModule.Preferences> combat = new LinkedHashMap<>();

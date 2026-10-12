@@ -534,8 +534,10 @@ public final class CombatAssistModule {
         return true;
     }
     /** Routes a real player click to an axe/mace combo before vanilla sends the initial attack. */
+    public static boolean manualMacePrepared() { return STATES.get(Feature.MACE).ownedSlot >= 0; }
     public static boolean beginManualAttack(Minecraft client, Entity target) {
         if (dispatching || AutoStunSlamModule.dispatching()) return false;
+        if (!manualMacePrepared() && AutoStunSlamModule.beginShieldHit(client, target)) return true;
         if (prepareStunSlamAttack(client, target)) {
             State state = STATES.get(Feature.STUNSLAM);
             if (!state.queued) queue(client, state, (LivingEntity) target);

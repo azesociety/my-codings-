@@ -64,7 +64,7 @@ public final class ClientSettingsScreen extends AzeiumScreen {
                 button(x, 130, logWidth, "New log session", ignored -> { CombatTestLog.begin("Manual"); notice = "Logs: logs/azeium-tests"; });
                 button(x + logWidth + 6, 130, w - logWidth - 6, "Flush action log", ignored -> { CombatTestLog.flush(); notice = "Buffered events saved"; });
                 button(x, 108, w, LungeTestClient.legitModeLabel(), ignored -> { LungeTestClient.toggleLegitMode(); show(page); })
-                        .setTooltip(Tooltip.create(UiTypography.text("Show actual weapon selections for 4 ticks before returning. Stun Slam keeps the axe visible for at least 4 ticks. Does not change server rules.")));
+                        .setTooltip(Tooltip.create(UiTypography.text("Show actual weapon selections for 4 ticks before returning. Stun Slam uses its selected delay; 0 ticks cannot show the axe in a separate frame. Does not change server rules.")));
                 button(x, 152, w, "Disable all modules", ignored -> { AzeiumModules.disableAll(minecraft); notice = "All modules disabled"; });
             }
             case THEMES -> {

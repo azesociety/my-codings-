@@ -1,10 +1,10 @@
-# aze's hub 2.5.3
+# aze's hub 2.5.4
 
-Auto StunSlam is adapted from your uploaded `PrivateStunslamClient` source.
-Enable the module and aim at an actively raised shield: it sends an axe hit,
-then a mace follow-up on the configured number of client ticks, returns your slot and tools,
-and waits the configured repeat delay before retriggering. It supports multiplayer survival
-players and inventory weapons, with normal server reach and damage rules.
+Auto StunSlam offers **Click shield** and **Look at shield** triggers, with
+saved mace/repeat delays from **0–10 ticks**. Zero sends the axe and mace attacks
+in the same client tick. Normal combat also works while flying with an Elytra.
+The spear shortcut dispatches on the key/mouse press, with a saved **0–10 tick**
+return delay in Legit mode.
 
 Retained from 2.4.1: restoring a saved spear shortcut no longer resolves its keyboard
 label before GLFW initializes. This fixes the reproduced "GLFW library is not
@@ -118,7 +118,7 @@ validation covers the reproduced library failure and an isolated Fabric client.
 
 Remove previous Spear Controls, Lunge Test Controls, Spear Test Lab, Spear Sprint
 and combined test JARs, including previous aze's hub versions. Put
-`azes-hub-2.5.3-mc1.21.11.jar` in your Minecraft
+`azes-hub-2.5.4-mc1.21.11.jar` in your Minecraft
 instance's `mods` folder alongside Fabric API. This is a client mod, not a Paper
 plugin. EntityCulling is not included or required.
 
@@ -269,27 +269,22 @@ Vanilla. Visibility and item cooldowns remain checked. Extended reach applies on
 to an entity already selected by the crosshair: it does not extend crosshair picking.
 The server may reject a distant mace hit even when a spear could reach that entity.
 
-**Auto StunSlam** uses the user-supplied Private Stunslam add-on's crosshair
-trigger: enable it and aim at a living entity actively blocking with a raised
-shield. No click or extra activation key is required. It selects an axe and
-sends its hit, then switches to a mace and sends a follow-up after the configured tick
-delay. It returns your original slot and waits the configured repeat delay before retriggering.
-An axe and mace may be in the hotbar or main inventory; close other containers.
-Weapons borrowed through ordinary SWAP actions are returned after the combo.
+**Auto StunSlam** requires a living target actively blocking with a raised shield.
+Choose **Trigger: Click shield** to require a deliberate attack or **Look at
+shield** to run while aiming at it. An axe and mace may be in your hotbar or main
+inventory; ordinary inventory SWAP actions borrow and return them as needed.
 
-The original add-on's singleplayer-only guard is replaced with live-world checks
-so it also works in your multiplayer survival world. Players on teams with
-friendly fire disabled, creative players and spectators are excluded. The module
-stops on death/disconnect/world changes and cancels pending attacks when you
-change slots, open a menu or lose focus. Ordinary zombies and wardens do not
-raise shields and therefore do not trigger this module.
+**Mace delay** and **Repeat delay** cycle through 0–10 client ticks. Default for
+fresh settings is 0. Zero sends axe then mace without waiting for another tick.
+Positive delays are honored, including in Legit mode. Death, disconnect, invalid
+targets, menus and manual slot changes retain the existing cancellation guards.
+Team friendly fire, normal reach and line of sight remain checked.
 
-A successful shield disable still requires normal server acceptance, an actual
-blocking shield, the correct facing direction and a valid axe hit. This quick
-sequence does not wait for full weapon charge or change any server cooldown,
-damage immunity or health. Its mace follow-up can be rejected or deal reduced
-damage; Smash and Wind Burst require real falling conditions. It is not an
-anticheat bypass.
+Stun Slam permits Elytra flight. The mace hit still follows vanilla damage rules;
+a flying hit does not automatically qualify as a Smash. Short delays can produce
+reduced or rejected damage. The module does not change server cooldowns or damage
+immunity. Ordinary zombies and wardens do not block with shields, so they do not
+trigger this module.
 
 AutoMace remains a same-click falling Smash helper with original-slot return.
 Its optional Hold key mode requires its Use key (default R) during the falling hit.
@@ -406,9 +401,9 @@ in controlled fixtures. These fixtures are not a joined multiplayer-server test.
 ## Saved toggles and Stun Slam timing (2.5.1)
 
 The client is now named **aze's hub**. In Auto StunSlam, **Mace delay**
-cycles 1–40 client ticks between the axe and mace attacks. **Repeat delay**
-cycles 1–60 client ticks before another automatic combo. Defaults remain
-1 and 12 ticks. Twenty client ticks are about one second at normal speed;
+cycles 0–10 client ticks between the axe and mace attacks. **Repeat delay**
+cycles 0–10 client ticks before another automatic combo. Fresh settings default to
+0 and 0 ticks. Twenty client ticks are about one second at normal speed;
 these controls change timing, not damage or server acceptance.
 
 Module ON/OFF choices and timing settings are saved in the existing
@@ -441,7 +436,7 @@ These checks do not guarantee accepted damage or shield disables on your server.
 Open **Client settings** and enable **Legit mode**. The actual selected hotbar
 weapon stays visible for four client ticks (about 0.2 seconds at normal speed):
 spear shortcut → spear → original slot; Auto Mace → mace → original slot;
-Auto StunSlam → axe → mace → original slot. Stun Slam uses at least four ticks
+Auto StunSlam → axe → mace → original slot. Stun Slam uses the configured number of ticks
 for its axe-to-mace delay in this mode, while longer configured delays are kept.
 Borrowed inventory weapons return after the visible hold finishes.
 
@@ -451,3 +446,26 @@ weapon. Manual hotbar changes are preserved, and opening a screen, losing focus
 or death releases pending returns through the existing ownership checks. Normal
 cooldowns, reach, falling Smash requirements and server damage rules still apply.
 This setting displays real selections; it does not add anticheat bypass behavior.
+
+## Current fast controls (2.5.4)
+
+In **Auto StunSlam**, choose **Trigger: Click shield** to require a deliberate
+attack on an actively raised shield, or **Trigger: Look at shield** to start
+while aiming at one. **Mace delay** and **Repeat delay** cycle through **0–10
+client ticks**. Fresh settings default to 0; existing valid delay choices remain.
+Zero sends axe then mace in the same client tick, while 1–10 waits for the
+configured client-tick callbacks. Looking alone never attacks in Click mode.
+Normal axe/mace attacks are allowed during Elytra flight. Vanilla falling Smash
+conditions and server damage/immunity rules are not changed.
+
+The **Spear** shortcut now acts immediately on a deliberate key or mouse-button
+press on Minecraft's main thread, rather than waiting for END tick. Its saved
+**Return delay** cycles **0–10 ticks** in Legit mode; default **0** selects the
+spear, sends one ordinary jab and restores the original slot during that same
+input event. A positive delay briefly shows the selected spear before returning.
+Hold repeats and idle ticks still never dispatch extra jabs.
+
+Legit mode honors zero Stun Slam delay instead of forcing a four-tick axe hold.
+At zero, axe and mace selections occur in the same tick, so the axe cannot appear
+in a separate rendered frame. The mace still uses Legit mode's visible return.
+Choose a positive mace delay to see the axe phase.
