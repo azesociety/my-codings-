@@ -1299,6 +1299,37 @@ public final class CombatAssistVerification {
                 require(!dev.lungetest.AutoStunSlamModule.enabled(), "Disable all saves OFF so another join does not re-enable modules");
             } catch (InstantiationException error) { throw new AssertionError(error); }
             finally { client.level = previousLevel; togglesField.set(settingsObject, previousToggles); dev.lungetest.AutoStunSlamModule.setEnabled(false); }
+            boolean previousLegit = LungeTestClient.legitMode();
+            if (!previousLegit) LungeTestClient.toggleLegitMode();
+            try {
+                connection.packets.clear(); target.blocking = true; player.inventory.setSelectedSlot(0);
+                dev.lungetest.AutoStunSlamModule.setEnabled(true); dev.lungetest.AutoStunSlamModule.tick(client);
+                require(attacks(connection) == 1 && player.getMainHandItem().is(Items.DIAMOND_AXE), "Legit Stun Slam shows the actual axe slot");
+                for (int i = 0; i < 3; i++) { dev.lungetest.VisibleSwapReturn.tick(client); dev.lungetest.AutoStunSlamModule.tick(client); }
+                require(attacks(connection) == 1 && player.getMainHandItem().is(Items.DIAMOND_AXE), "Legit axe remains visible instead of changing in the same rendered tick");
+                dev.lungetest.VisibleSwapReturn.tick(client); dev.lungetest.AutoStunSlamModule.tick(client);
+                require(attacks(connection) == 2 && player.getMainHandItem().is(Items.MACE), "Legit Stun Slam shows the actual mace after its hit");
+                for (int i = 0; i < 3; i++) dev.lungetest.VisibleSwapReturn.tick(client);
+                require(player.getMainHandItem().is(Items.MACE), "Legit mace stays visible for three intervening ticks");
+                dev.lungetest.VisibleSwapReturn.tick(client);
+                require(player.inventory.getSelectedSlot() == 0 && player.inventory.getItem(12).is(Items.DIAMOND_AXE)
+                                && player.inventory.getItem(31).is(Items.MACE), "Legit Stun Slam restores the original slot and both borrowed inventory tools");
+                dev.lungetest.AutoStunSlamModule.setEnabled(false);
+                CombatAssistModule.setEnabled(MACE, true); player.grounded = false; player.velocity = new Vec3(0, -.5, 0); player.fallDistance = 2.5;
+                connection.packets.clear(); client.gameMode.attack(player, target);
+                require(attacks(connection) == 1 && player.getMainHandItem().is(Items.MACE), "Legit Auto Mace keeps the real mace selected after the same-click hit");
+                for (int i = 0; i < 4; i++) dev.lungetest.VisibleSwapReturn.tick(client);
+                require(player.inventory.getSelectedSlot() == 0 && player.inventory.getItem(31).is(Items.MACE), "Legit Auto Mace returns the original slot and inventory mace");
+                client.gameMode.attack(player, target); player.inventory.setSelectedSlot(5);
+                for (int i = 0; i < 4; i++) dev.lungetest.VisibleSwapReturn.tick(client);
+                require(player.inventory.getSelectedSlot() == 5, "Delayed return preserves a manual hotbar change");
+                CombatAssistModule.setEnabled(MACE, false); player.inventory.setSelectedSlot(0);
+                player.grounded = true; player.velocity = Vec3.ZERO; player.fallDistance = 0;
+            } finally {
+                dev.lungetest.VisibleSwapReturn.finishNow();
+                if (LungeTestClient.legitMode() != previousLegit) LungeTestClient.toggleLegitMode();
+                CombatAssistModule.setEnabled(MACE, false);
+            }
         } finally {
             dev.lungetest.AutoStunSlamModule.setEnabled(false);
             CombatAssistModule.setEnabled(SLAM, false);

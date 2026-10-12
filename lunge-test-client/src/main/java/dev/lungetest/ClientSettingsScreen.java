@@ -60,8 +60,11 @@ public final class ClientSettingsScreen extends AzeiumScreen {
                 button(x, 86, w, "Glass opacity: " + LungeTestClient.uiOpacity() + "%", ignored -> {
                     LungeTestClient.cycleUiOpacity(); show(page);
                 });
-                button(x, 108, w, "New log session", ignored -> { CombatTestLog.begin("Manual"); notice = "Logs: logs/azeium-tests"; });
-                button(x, 130, w, "Flush action log", ignored -> { CombatTestLog.flush(); notice = "Buffered events saved"; });
+                int logWidth = (w - 6) / 2;
+                button(x, 130, logWidth, "New log session", ignored -> { CombatTestLog.begin("Manual"); notice = "Logs: logs/azeium-tests"; });
+                button(x + logWidth + 6, 130, w - logWidth - 6, "Flush action log", ignored -> { CombatTestLog.flush(); notice = "Buffered events saved"; });
+                button(x, 108, w, LungeTestClient.legitModeLabel(), ignored -> { LungeTestClient.toggleLegitMode(); show(page); })
+                        .setTooltip(Tooltip.create(UiTypography.text("Show actual weapon selections for 4 ticks before returning. Stun Slam keeps the axe visible for at least 4 ticks. Does not change server rules.")));
                 button(x, 152, w, "Disable all modules", ignored -> { AzeiumModules.disableAll(minecraft); notice = "All modules disabled"; });
             }
             case THEMES -> {
@@ -184,9 +187,7 @@ public final class ClientSettingsScreen extends AzeiumScreen {
             UiTypography.draw(g, font, "Automatic axe → mace", x, top() + 90, ThemeManager.text(), false);
             UiTypography.draw(g, font, "Click a raised shield to start.", x, top() + 114, ThemeManager.muted(), false);
             UiTypography.draw(g, font, "Keep both tools in your hotbar.", x, top() + 138, ThemeManager.muted(), false);
-        } else if (page == Page.CLIENT) {
-            UiTypography.draw(g, font, "Preferences save automatically.", x, top() + 160, ThemeManager.muted(), false);
-            UiTypography.draw(g, font, "Traces: logs/azeium-tests", x, top() + 176, ThemeManager.muted(), false);
+
         }
         String status = !notice.isEmpty() ? notice : page == Page.TESTS
                 ? trial == Trial.SHIELD ? ShieldDrainerModule.status() : trial == Trial.STUN

@@ -90,6 +90,7 @@ public final class SpearQuickLungeModule {
         }
     }
     private static void perform(Minecraft client) {
+        VisibleSwapReturn.finishNow();
         var player = client.player;
         int slot = spearSlot(player);
         if (slot < 0) { status = "Put a spear in " + (preferredSlot < 0 ? "your hotbar" : "slot " + slotLabel()); return; }
@@ -105,11 +106,15 @@ public final class SpearQuickLungeModule {
             CombatTestLog.event("Spear", "quick_lunge", "slot=" + slot + ",return=" + originalSlot + ",started=" + started);
         } finally {
             dispatching = false;
-            if (client.player == player && client.getConnection() == connection
-                    && player.getInventory().getSelectedSlot() == slot) {
-                player.getInventory().setSelectedSlot(originalSlot);
-                ((HotbarSyncAccess) client.gameMode).azeium$syncCarriedItem();
-            }
+            Runnable restore = () -> {
+                if (client.player == player && client.getConnection() == connection && client.gameMode != null
+                        && player.getInventory().getSelectedSlot() == slot) {
+                    player.getInventory().setSelectedSlot(originalSlot);
+                    ((HotbarSyncAccess) client.gameMode).azeium$syncCarriedItem();
+                }
+            };
+            if (LungeTestClient.legitMode()) VisibleSwapReturn.defer("spear", restore);
+            else restore.run();
         }
     }
 }

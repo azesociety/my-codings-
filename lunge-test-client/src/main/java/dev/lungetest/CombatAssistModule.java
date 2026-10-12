@@ -493,7 +493,8 @@ public final class CombatAssistModule {
 
     /** Prepares Stun Slam first, otherwise selects the mace for a falling click. */
     public static boolean prepareManualAttack(Minecraft client, Entity target) {
-        if (dispatching || AutoStunSlamModule.dispatching()) return false;
+        if (dispatching || AutoStunSlamModule.dispatching() || SpearQuickLungeModule.dispatching()) return false;
+        VisibleSwapReturn.finishNow();
         if (prepareStunSlamAttack(client, target)) return false;
         State state = STATES.get(Feature.MACE);
         if (dispatching || state.prefs.maceAction != MaceAction.FALLING_SMASH
@@ -586,6 +587,10 @@ public final class CombatAssistModule {
         boolean owned = state.ownedSlot >= 0 && client.player != null
                 && state.connection == client.getConnection() && state.level == client.level
                 && client.player.getInventory().getSelectedSlot() == state.ownedSlot;
+        if (owned && LungeTestClient.legitMode()) {
+            VisibleSwapReturn.defer("mace", () -> releaseSlot(client, state));
+            return;
+        }
         releaseSlot(client, state);
         if (owned && client.gameMode != null) ((HotbarSyncAccess) client.gameMode).azeium$syncCarriedItem();
     }

@@ -39,6 +39,7 @@ public final class AutoStunSlamModule {
     public static boolean busy() { return pendingTarget != null; }
     public static String status() { return status; }
     public static void setEnabled(boolean value) {
+        if (VisibleSwapReturn.pending("stun")) VisibleSwapReturn.finishNow();
         cancel(Minecraft.getInstance());
         enabled = value;
         retriggerDelay = 0;
@@ -47,7 +48,7 @@ public final class AutoStunSlamModule {
     }
     public static void tick(Minecraft client) {
         inventory.tick(client);
-        if (!enabled) return;
+        if (!enabled || VisibleSwapReturn.pending("stun")) return;
         if (client.player == null || client.level == null || client.gameMode == null || client.getConnection() == null
                 || !client.player.isAlive() || level != null && (level != client.level || connection != client.getConnection())) {
             setEnabled(false); return;
@@ -76,7 +77,8 @@ public final class AutoStunSlamModule {
                 attack(client, target);
                 status = "Axe + mace sent; normal damage rules apply";
             } else status = "Follow-up cancelled: target, reach or mace lost";
-            cancel(client);
+            if (LungeTestClient.legitMode() && ownedSlot >= 0) VisibleSwapReturn.defer("stun", () -> cancel(client));
+            else cancel(client);
             retriggerDelay = prefs.retriggerTicks;
             return;
         }
@@ -93,6 +95,7 @@ public final class AutoStunSlamModule {
                 stack -> stack.is(Items.MACE))) {
             status = "Need axe + mace in inventory; close other containers"; return;
         }
+        VisibleSwapReturn.finishNow();
         originalSlot = client.player.getInventory().getSelectedSlot();
         int axe = find(client, true);
         if (axe < 0 || !selectAndCheck(client, axe, target)) {
@@ -100,7 +103,7 @@ public final class AutoStunSlamModule {
         }
         attack(client, target);
         pendingTarget = target;
-        followUpIn = prefs.followUpTicks;
+        followUpIn = LungeTestClient.legitMode() ? Math.max(4, prefs.followUpTicks) : prefs.followUpTicks;
         status = "Axe hit sent; mace in " + followUpIn + " ticks";
     }
     public static void yieldForManualAttack(Minecraft client) {

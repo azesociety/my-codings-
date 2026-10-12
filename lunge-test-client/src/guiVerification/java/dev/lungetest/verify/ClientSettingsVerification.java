@@ -56,6 +56,11 @@ public final class ClientSettingsVerification {
             }
             var screen = new ClientSettingsScreen(parent, ClientSettingsScreen.Page.CLIENT);
             client.setScreen(screen);
+            boolean oldLegit = LungeTestClient.legitMode();
+            button(screen, "Legit mode:").onPress(new KeyEvent(GLFW.GLFW_KEY_ENTER, 0, 0));
+            require(LungeTestClient.legitMode() != oldLegit, "Actual Client setting enables visible swaps");
+            button(screen, "Legit mode:").onPress(new KeyEvent(GLFW.GLFW_KEY_ENTER, 0, 0));
+            require(LungeTestClient.legitMode() == oldLegit, "Actual Client setting restores normal mode");
             button(screen, "GUI bind:").onPress(new KeyEvent(GLFW.GLFW_KEY_ENTER, 0, 0));
             require(screen.capturingKeybind(), "Click starts key capture");
             screen.handleCapturedKey(new KeyEvent(GLFW.GLFW_KEY_F8, 0, 0));

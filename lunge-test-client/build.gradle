@@ -1,5 +1,5 @@
 plugins { id 'net.fabricmc.fabric-loom-remap' version '1.14.10' }
-version = '2.5.2'
+version = '2.5.3'
 group = 'dev.lungetest'
 repositories { mavenCentral() }
 dependencies {
@@ -46,4 +46,4 @@ loom {
 }
 
 base { archivesName = 'azeium' }
-tasks.named('remapJar') { archiveFileName = 'azes-hub-2.5.2-mc1.21.11.jar' }
+tasks.named('remapJar') { archiveFileName = 'azes-hub-2.5.3-mc1.21.11.jar' }

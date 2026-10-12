@@ -1,4 +1,4 @@
-# aze's hub 2.5.2
+# aze's hub 2.5.3
 
 Auto StunSlam is adapted from your uploaded `PrivateStunslamClient` source.
 Enable the module and aim at an actively raised shield: it sends an axe hit,
@@ -118,7 +118,7 @@ validation covers the reproduced library failure and an isolated Fabric client.
 
 Remove previous Spear Controls, Lunge Test Controls, Spear Test Lab, Spear Sprint
 and combined test JARs, including previous aze's hub versions. Put
-`azes-hub-2.5.2-mc1.21.11.jar` in your Minecraft
+`azes-hub-2.5.3-mc1.21.11.jar` in your Minecraft
 instance's `mods` folder alongside Fabric API. This is a client mod, not a Paper
 plugin. EntityCulling is not included or required.
 
@@ -435,3 +435,19 @@ outside ordinary axe reach no longer cause repeated inventory borrowing. Existin
 Stun Slam timing controls, inventory return and saved module toggles are retained.
 
 These checks do not guarantee accepted damage or shield disables on your server.
+
+## Legit mode: visible swaps (2.5.3)
+
+Open **Client settings** and enable **Legit mode**. The actual selected hotbar
+weapon stays visible for four client ticks (about 0.2 seconds at normal speed):
+spear shortcut → spear → original slot; Auto Mace → mace → original slot;
+Auto StunSlam → axe → mace → original slot. Stun Slam uses at least four ticks
+for its axe-to-mace delay in this mode, while longer configured delays are kept.
+Borrowed inventory weapons return after the visible hold finishes.
+
+The setting is saved across sessions. OFF retains the existing immediate return
+behavior. A new action finishes the previous owned return before selecting a
+weapon. Manual hotbar changes are preserved, and opening a screen, losing focus
+or death releases pending returns through the existing ownership checks. Normal
+cooldowns, reach, falling Smash requirements and server damage rules still apply.
+This setting displays real selections; it does not add anticheat bypass behavior.

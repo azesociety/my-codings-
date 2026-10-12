@@ -166,6 +166,25 @@ public final class SpearQuickLungeVerification {
             client.setScreen(new LungeTestScreen()); var clearMenu = (LungeTestScreen) client.screen;
             button(clearMenu, "Quick-lunge key: ").onPress(new KeyEvent(GLFW.GLFW_KEY_ENTER, 0, 0)); key(client, GLFW.GLFW_KEY_DELETE, GLFW.GLFW_PRESS);
             require(SpearQuickLungeModule.key() == GLFW.GLFW_KEY_UNKNOWN && !clearMenu.capturingKeybind(), "Delete clears spear action key through real GUI capture");
+            boolean previousLegit = LungeTestClient.legitMode();
+            if (!previousLegit) LungeTestClient.toggleLegitMode();
+            try {
+                client.setScreen(null);
+                SpearQuickLungeModule.initialize(SpearQuickLungeModule.mouseCode(4), -1);
+                player.inventory.setSelectedSlot(0);
+                field(Minecraft.class, "missTime").setInt(client, 0);
+                long visibleBefore = stabs(connection);
+                mouseHandler.invoke(client.mouseHandler, client.getWindow().handle(), mouseButton, GLFW.GLFW_PRESS);
+                SpearQuickLungeModule.tick(client);
+                require(stabs(connection) == visibleBefore + 1 && LungeTestClient.isSpear(player.getMainHandItem()), "Legit spear shortcut visibly selects the actual spear after its jab");
+                for (int i = 0; i < 3; i++) dev.lungetest.VisibleSwapReturn.tick(client);
+                require(LungeTestClient.isSpear(player.getMainHandItem()), "Legit spear selection remains visible for three intervening ticks");
+                dev.lungetest.VisibleSwapReturn.tick(client);
+                require(player.inventory.getSelectedSlot() == 0, "Legit spear shortcut returns the original slot after four ticks");
+            } finally {
+                dev.lungetest.VisibleSwapReturn.finishNow();
+                if (LungeTestClient.legitMode() != previousLegit) LungeTestClient.toggleLegitMode();
+            }
             LungeTestClient.LOG.info("QUICK_LUNGE_VERIFIED: {} checks; transformed input/attack, one STAB per press, ordinary select-STAB-return order, empty hand/selected spear, slot preference, conflicts and cancellation guards; no network transport", checks);
         } catch (ReflectiveOperationException e) { throw new AssertionError("Spear shortcut verification failed", e); }
         finally {

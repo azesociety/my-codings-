@@ -1,8 +1,8 @@
-# aze's hub 2.5.2
+# aze's hub 2.5.3
 
 Minecraft Java 1.21.11 · Fabric Loader 0.19.3+ · Java 21 · Fabric API.
 
-- [Download the mod JAR](https://github.com/azesociety/my-codings-/raw/refs/heads/main/azes-hub-2.5.2-mc1.21.11.jar)
+- [Download the mod JAR](https://github.com/azesociety/my-codings-/raw/refs/heads/main/azes-hub-2.5.3-mc1.21.11.jar)
 - [Browse the source project](lunge-test-client/)
 - [Installation and controls](lunge-test-client/README.md)
 
@@ -10,7 +10,7 @@ Replace the older aze's hub JAR in your instance's mods folder. Build the source
 with Java 21 using `gradlew.bat build` (Windows) or `./gradlew build` (Linux/macOS)
 inside `lunge-test-client`. The first build downloads dependencies.
 
-New in 2.5.2: Auto Mace also swaps on direct game-mode attacks, supports slow descending Smash hits and takes priority over a pending automatic Stun Slam on your deliberate falling click. Stun Slam cancels invalid targets promptly and avoids inventory swaps on out-of-reach shields.
+New in 2.5.3: a saved Legit mode in Client settings shows actual spear, axe and mace selections briefly before returning to your original slot.
 
 Stun Slam now uses your uploaded add-on's automatic crosshair behavior: enable it and aim at an actively raised shield. It attacks with an axe, follows with a mace after the configured number of client ticks, returns your slot, and waits the configured repeat delay before retriggering. It supports normal multiplayer players and inventory weapons. Server damage rules still apply.
 
@@ -57,3 +57,19 @@ outside ordinary axe reach no longer cause repeated inventory borrowing. Existin
 Stun Slam timing controls, inventory return and saved module toggles are retained.
 
 These checks do not guarantee accepted damage or shield disables on your server.
+
+## Legit mode: visible swaps (2.5.3)
+
+Open **Client settings** and enable **Legit mode**. The actual selected hotbar
+weapon stays visible for four client ticks (about 0.2 seconds at normal speed):
+spear shortcut → spear → original slot; Auto Mace → mace → original slot;
+Auto StunSlam → axe → mace → original slot. Stun Slam uses at least four ticks
+for its axe-to-mace delay in this mode, while longer configured delays are kept.
+Borrowed inventory weapons return after the visible hold finishes.
+
+The setting is saved across sessions. OFF retains the existing immediate return
+behavior. A new action finishes the previous owned return before selecting a
+weapon. Manual hotbar changes are preserved, and opening a screen, losing focus
+or death releases pending returns through the existing ownership checks. Normal
+cooldowns, reach, falling Smash requirements and server damage rules still apply.
+This setting displays real selections; it does not add anticheat bypass behavior.

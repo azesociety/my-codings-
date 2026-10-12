@@ -82,6 +82,7 @@ public final class LungeTestClient implements ClientModInitializer {
         AutoStunSlamModule.initialize(settings.stun);
         METRICS.reset(System.nanoTime());
         ClientTickEvents.START_CLIENT_TICK.register(client -> {
+            VisibleSwapReturn.tick(client);
             if (enabled && (client.getConnection() != armedConnection || client.player == null
                     || !client.player.isAlive())) disable();
             syncMetricsContext(client);
@@ -120,7 +121,7 @@ public final class LungeTestClient implements ClientModInitializer {
                 (message, overlay) -> CombatTestLog.observation(message.getString()));
         net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents.CHAT.register(
                 (message, signed, sender, parameters, received) -> CombatTestLog.observation(message.getString()));
-        LOG.info("aze's hub 2.5.2 loaded; the menu key opens modules. Auto Telly can jump, turn and bridge automatically; saved module toggles resume in live worlds.");
+        LOG.info("aze's hub 2.5.3 loaded; the menu key opens modules. Auto Telly can jump, turn and bridge automatically; saved module toggles resume in live worlds.");
     }
 
     public static boolean isSpear(ItemStack stack) {
@@ -185,7 +186,7 @@ public final class LungeTestClient implements ClientModInitializer {
             var folder = FabricLoader.getInstance().getGameDir().resolve("logs/spearometer");
             Files.createDirectories(folder);
             var report = new JsonObject();
-            report.addProperty("modVersion", "2.5.2");
+            report.addProperty("modVersion", "2.5.3");
             report.addProperty("minecraftVersion", "1.21.11");
             report.addProperty("exportedAt", Instant.now().toString());
             report.addProperty("measurementSource", "client");
@@ -297,6 +298,9 @@ public final class LungeTestClient implements ClientModInitializer {
         for (var module : AzeiumModules.Module.values()) settings.moduleToggles.put(module.name(), module.enabled());
         saveSettings();
     }
+    public static boolean legitMode() { return settings.legitMode; }
+    public static void toggleLegitMode() { settings.legitMode = !settings.legitMode; VisibleSwapReturn.finishNow(); saveSettings(); }
+    public static String legitModeLabel() { return "Legit mode: " + (legitMode() ? "ON" : "OFF"); }
     public static void saveStunPreferences() { settings.stun = AutoStunSlamModule.preferences(); saveSettings(); }
     public static void saveClickerPreferences() { settings.clicker = AutoClickerModule.preferences(); saveSettings(); }
     private static void saveSettings() {
@@ -343,6 +347,7 @@ public final class LungeTestClient implements ClientModInitializer {
         Map<String, CombatAssistModule.Preferences> combat = new LinkedHashMap<>();
         ThemeManager.Preferences theme = new ThemeManager.Preferences();
         ShieldDrainerModule.Preferences shieldTest = new ShieldDrainerModule.Preferences();
+        boolean legitMode;
         Map<String, Boolean> moduleToggles = new LinkedHashMap<>();
         AutoStunSlamModule.Preferences stun = new AutoStunSlamModule.Preferences();
         AutoClickerModule.Preferences clicker = new AutoClickerModule.Preferences();
